@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from '@/utils/secureStore';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.0.100:3001';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.120.141.19:3001';
 
 const ACCESS_TOKEN_KEY = 'gg_access_token';
 const REFRESH_TOKEN_KEY = 'gg_refresh_token';
@@ -95,9 +95,16 @@ api.interceptors.response.use(
 export const AuthAPI = {
   signIn: (email, password) => api.post('/signin', { email, password }),
   signOut: (refresh_token) => api.post('/signout', { refresh_token }),
-  forgotPassword: (email) => api.post('/forgot-password', { email }),
+  forgotPassword: (email) => api.post('/forgot-password', { email, client_type: 'mobile' }),
   resetPassword: (token, newPassword, confirmPassword) =>
     api.post(`/reset-password?token=${encodeURIComponent(token)}`, {
+      newPassword,
+      confirmPassword,
+    }),
+  verifyOTPAndResetPassword: (email, otp, newPassword, confirmPassword) =>
+    api.post('/verify-otp-reset', {
+      email,
+      otp,
       newPassword,
       confirmPassword,
     }),

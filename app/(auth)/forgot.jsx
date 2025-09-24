@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { AuthAPI } from '@/services/api';
 
 export default function Forgot() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,9 +14,17 @@ export default function Forgot() {
     setLoading(true);
     try {
       const res = await AuthAPI.forgotPassword(email.trim());
-      setMsg(res?.data?.message || 'If the email exists, we sent a reset link.');
+      setMsg(res?.data?.message || 'If the email exists, we sent a reset OTP.');
+      
+      // Navigate to OTP verification screen after successful request
+      setTimeout(() => {
+        router.push({
+          pathname: '/(auth)/verify-otp',
+          params: { email: email.trim() }
+        });
+      }, 1500);
     } catch (e) {
-      setMsg(e?.response?.data?.message || 'Unable to send reset link');
+      setMsg(e?.response?.data?.message || 'Unable to send reset OTP');
     } finally {
       setLoading(false);
     }
@@ -26,7 +35,7 @@ export default function Forgot() {
       <View style={styles.card}>
         <View style={styles.logoCircle}><Text style={styles.logoIcon}>🌱</Text></View>
         <Text style={styles.title}>Forgot Password?</Text>
-        <Text style={styles.subtitle}>Enter your email and we'll send you a reset link</Text>
+        <Text style={styles.subtitle}>Enter your email and we'll send you a reset OTP</Text>
 
         {!!msg && <Text style={styles.info}>{msg}</Text>}
 
@@ -41,7 +50,7 @@ export default function Forgot() {
         />
 
         <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={onSubmit} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Sending...' : 'Send Reset Link'}</Text>
+          <Text style={styles.buttonText}>{loading ? 'Sending...' : 'Send Reset OTP'}</Text>
         </TouchableOpacity>
 
         <View style={{ alignItems: 'center', marginTop: 12 }}>
