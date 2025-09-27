@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AuthAPI } from '@/services/api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function VerifyOTP() {
   const { email } = useLocalSearchParams();
@@ -88,96 +89,259 @@ export default function VerifyOTP() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.logoCircle}><Text style={styles.logoIcon}>🔐</Text></View>
-        
-        {step === 1 ? (
-          <>
-            <Text style={styles.title}>Verify OTP</Text>
-            <Text style={styles.subtitle}>Enter the 6-digit code sent to your email</Text>
-            <Text style={styles.emailText}>{email}</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.title}>Set New Password</Text>
-            <Text style={styles.subtitle}>Create a new password for your account</Text>
-          </>
-        )}
-
-        {!!msg && <Text style={styles.info}>{msg}</Text>}
-
-        {step === 1 ? (
-          <>
-            <Text style={styles.label}>OTP Code</Text>
-            <TextInput
-              placeholder="123456"
-              value={otp}
-              onChangeText={setOtp}
-              keyboardType="numeric"
-              maxLength={6}
-              style={styles.otpInput}
-              autoFocus
-            />
-
-            <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={verifyOTP} disabled={loading}>
-              <Text style={styles.buttonText}>{loading ? 'Verifying...' : 'Verify OTP'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.resendButton} onPress={resendOTP} disabled={loading}>
-              <Text style={styles.resendText}>Resend OTP</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.label}>New Password</Text>
-            <TextInput
-              placeholder="New password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              style={styles.input}
-            />
+    <LinearGradient
+      colors={['#6d28d9', '#8b5cf6', '#a855f7']}
+      style={styles.container}
+    >
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        style={styles.keyboardView}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header Section */}
+          <View style={styles.header}>
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoIcon}>🔐</Text>
+            </View>
             
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              style={styles.input}
-            />
+            {step === 1 ? (
+              <>
+                <Text style={styles.title}>Verify OTP</Text>
+                <Text style={styles.subtitle}>Enter the 6-digit code sent to your email</Text>
+                <Text style={styles.emailText}>{email}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.title}>Set New Password</Text>
+                <Text style={styles.subtitle}>Create a new password for your account</Text>
+              </>
+            )}
+          </View>
 
-            <TouchableOpacity style={[styles.button, loading && { opacity: 0.7 }]} onPress={resetPassword} disabled={loading}>
-              <Text style={styles.buttonText}>{loading ? 'Resetting...' : 'Reset Password'}</Text>
-            </TouchableOpacity>
+          {/* Form Section */}
+          <View style={styles.formContainer}>
+            {!!msg && <Text style={styles.info}>{msg}</Text>}
 
-            <TouchableOpacity style={styles.backButton} onPress={() => setStep(1)}>
-              <Text style={styles.backText}>← Back to OTP</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </KeyboardAvoidingView>
+            {step === 1 ? (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>OTP Code</Text>
+                  <TextInput
+                    placeholder="123456"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="numeric"
+                    maxLength={6}
+                    style={styles.otpInput}
+                    autoFocus
+                  />
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.button, loading && { opacity: 0.7 }]} 
+                  onPress={verifyOTP} 
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    {loading ? 'Verifying...' : 'Verify OTP'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.resendButton} 
+                  onPress={resendOTP} 
+                  disabled={loading}
+                >
+                  <Text style={styles.resendText}>Resend OTP</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>New Password</Text>
+                  <TextInput
+                    placeholder="New password"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    style={styles.input}
+                  />
+                </View>
+                
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Confirm Password</Text>
+                  <TextInput
+                    placeholder="Confirm password"
+                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry
+                    style={styles.input}
+                  />
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.button, loading && { opacity: 0.7 }]} 
+                  onPress={resetPassword} 
+                  disabled={loading}
+                >
+                  <Text style={styles.buttonText}>
+                    {loading ? 'Resetting...' : 'Reset Password'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.backButton} 
+                  onPress={() => setStep(1)}
+                >
+                  <Text style={styles.backText}>← Back to OTP</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: '#f3f0ff' },
-  card: { width: '100%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 16, padding: 24, elevation: 4 },
-  logoCircle: { alignSelf: 'center', width: 64, height: 64, borderRadius: 32, backgroundColor: '#ede9fe', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  logoIcon: { fontSize: 28 },
-  title: { textAlign: 'center', fontSize: 20, fontWeight: '700', color: '#111827' },
-  subtitle: { textAlign: 'center', marginTop: 6, color: '#6b7280', marginBottom: 8 },
-  emailText: { textAlign: 'center', fontSize: 14, color: '#6d28d9', fontWeight: '600', marginBottom: 16 },
-  label: { marginTop: 14, marginBottom: 6, color: '#374151', fontWeight: '600' },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#fafafa' },
-  otpInput: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, backgroundColor: '#fafafa', textAlign: 'center', fontSize: 18, fontWeight: '600', letterSpacing: 4 },
-  button: { marginTop: 16, backgroundColor: '#6d28d9', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700' },
-  resendButton: { marginTop: 12, alignItems: 'center' },
-  resendText: { color: '#6d28d9', fontWeight: '600' },
-  backButton: { marginTop: 12, alignItems: 'center' },
-  backText: { color: '#6b7280', fontWeight: '600' },
-  info: { color: '#111827', backgroundColor: '#eef2ff', padding: 8, borderRadius: 8, marginTop: 10, textAlign: 'center' },
+  container: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  logoCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  logoIcon: {
+    fontSize: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emailText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  formContainer: {
+    width: '100%',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  otpInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: 4,
+    color: '#ffffff',
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  button: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  buttonText: {
+    color: '#6d28d9',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  resendButton: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  resendText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  backButton: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  backText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  info: {
+    color: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
 });

@@ -9,11 +9,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     (async () => {
-      const [access, refresh] = await Promise.all([
-        SecureStore.getItemAsync('gg_access_token'),
-        SecureStore.getItemAsync('gg_refresh_token'),
-      ]);
-      setState((s) => ({ ...s, accessToken: access, refreshToken: refresh, loading: false }));
+      try {
+        const [access, refresh] = await Promise.all([
+          SecureStore.getItemAsync('gg_access_token'),
+          SecureStore.getItemAsync('gg_refresh_token'),
+        ]);
+        console.log('Loaded tokens:', { access: !!access, refresh: !!refresh });
+        setState((s) => ({ ...s, accessToken: access, refreshToken: refresh, loading: false }));
+      } catch (error) {
+        console.log('Error loading tokens:', error);
+        setState((s) => ({ ...s, accessToken: null, refreshToken: null, loading: false }));
+      }
     })();
   }, []);
 
