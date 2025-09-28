@@ -1,7 +1,7 @@
 import * as SecureStore from '@/utils/secureStore';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.198.105.67:3001';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.131.78.173:3001';
 
 const ACCESS_TOKEN_KEY = 'gg_access_token';
 const REFRESH_TOKEN_KEY = 'gg_refresh_token';

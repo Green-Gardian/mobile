@@ -25,20 +25,23 @@ export default function HomeScreen() {
   const [driverData, setDriverData] = useState(null);
   const [currentTasks, setCurrentTasks] = useState([]);
   const [vehicleData, setVehicleData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isDriver); // Only loading for drivers
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   // Load driver data on component mount (only for drivers)
   useEffect(() => {
-    if (isDriver) {
+    if (isDriver && state.user) {
       loadDriverData();
+    } else {
+      // For residents or when no user, ensure loading is false
+      setLoading(false);
     }
-  }, [isDriver]);
+  }, [isDriver, state.user]);
 
   // Add focus listener to refresh data when tab becomes active (only for drivers)
   useEffect(() => {
-    if (isDriver) {
+    if (isDriver && state.user) {
       const unsubscribe = navigation.addListener('focus', () => {
         console.log('Overview tab focused, refreshing data...');
         loadDriverData();
@@ -46,7 +49,7 @@ export default function HomeScreen() {
 
       return unsubscribe;
     }
-  }, [navigation, isDriver]);
+  }, [navigation, isDriver, state.user]);
 
   const loadDriverData = async (isRefresh = false) => {
     try {
@@ -171,7 +174,7 @@ export default function HomeScreen() {
   };
 
   const onRefresh = () => {
-    if (isDriver) {
+    if (isDriver && state.user) {
       loadDriverData(true);
     }
   };
@@ -403,32 +406,51 @@ export default function HomeScreen() {
   );
 
   const renderContent = () => {
+    // If no user is authenticated, don't render anything
+    if (!state.user) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Redirecting to sign in...</Text>
+        </View>
+      );
+    }
+
+    // Resident content
     if (isResident) {
       return renderResidentOverview();
     }
     
     // Driver content
-    switch (activeTab) {
-      case 'overview': return renderDriverOverview();
-      case 'tasks': return <TasksTab />;
-      case 'workareas': return <WorkAreasTab />;
-      case 'performance': return <PerformanceTab />;
-      case 'profile': return <ProfileTab />;
-      default: return renderDriverOverview();
+    if (isDriver) {
+      switch (activeTab) {
+        case 'overview': return renderDriverOverview();
+        case 'tasks': return <TasksTab />;
+        case 'workareas': return <WorkAreasTab />;
+        case 'performance': return <PerformanceTab />;
+        case 'profile': return <ProfileTab />;
+        default: return renderDriverOverview();
+      }
     }
+    
+    // Fallback for unknown roles
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {isDriver ? 'Driver Dashboard' : 'Resident Dashboard'}
-        </Text>
-        <TouchableOpacity style={styles.notificationBtn}>
-          <Text style={styles.notificationIcon}>🔔</Text>
-        </TouchableOpacity>
-      </View>
+       {/* Header */}
+       <View style={styles.header}>
+         <Text style={styles.headerTitle}>
+           {isDriver ? 'Driver Dashboard' : 'Resident Dashboard'}
+         </Text>
+         <TouchableOpacity style={styles.notificationBtn}>
+           <Text style={styles.notificationIcon}>🔔</Text>
+         </TouchableOpacity>
+       </View>
 
       {/* Tab Navigation - Only for Drivers */}
       {isDriver && (
@@ -493,9 +515,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  notificationIcon: {
-    fontSize: 18,
-  },
+   notificationIcon: {
+     fontSize: 18,
+   },
   bottomTabContainer: {
     position: 'absolute',
     bottom: 0,

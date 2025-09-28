@@ -16,12 +16,15 @@ function RouterStack() {
   const { state } = useAuth();
   const isAuthed = !!state.accessToken;
   const [showSplash, setShowSplash] = useState(true);
+  const [navigationKey, setNavigationKey] = useState(0);
 
   // Debug logging
   console.log('Auth state:', { 
     loading: state.loading, 
     hasToken: !!state.accessToken, 
-    isAuthed 
+    isAuthed,
+    user: state.user,
+    role: state.user?.role
   });
 
   // Hide splash screen immediately when authentication state is determined
@@ -31,9 +34,16 @@ function RouterStack() {
     }
   }, [state.loading]);
 
-  // Reset splash screen when auth state changes
+  // Reset splash screen when auth state changes (but not on initial load)
   useEffect(() => {
-    setShowSplash(true);
+    if (!state.loading) {
+      setShowSplash(false);
+    }
+  }, [isAuthed, state.loading]);
+
+  // Force re-render when auth state changes
+  useEffect(() => {
+    setNavigationKey(prev => prev + 1);
   }, [isAuthed]);
 
   // Show splash screen while loading or during splash delay
@@ -41,8 +51,10 @@ function RouterStack() {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
+  console.log('Navigation decision:', { isAuthed, showSplash, loading: state.loading });
+
   return (
-    <Stack>
+    <Stack key={navigationKey}>
       {isAuthed ? (
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       ) : (
