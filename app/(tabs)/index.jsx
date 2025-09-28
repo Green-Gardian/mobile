@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
+import { DriverAPI } from '@/services/driver';
+import { VehicleAPI } from '@/services/vehicle';
 import TasksTab from '@/components/TasksTab';
 import WorkAreasTab from '@/components/WorkAreasTab';
 import PerformanceTab from '@/components/PerformanceTab';
@@ -11,72 +14,211 @@ const { width } = Dimensions.get('window');
 
 export default function DriverDashboard() {
   const { signOut, state } = useAuth();
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('overview');
+  const [driverData, setDriverData] = useState(null);
+  const [currentTasks, setCurrentTasks] = useState([]);
+  const [vehicleData, setVehicleData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Mock data - replace with actual API calls later
-  const driverData = {
-    name: 'John Doe',
-    id: 'DRV001',
-    email: 'john.doe@greenguardian.com',
-    phone: '+92 300 1234567',
-    status: 'active',
-    rating: 4.8,
-    totalCollections: 156,
-    todayCollections: 8,
-    workAreas: 2,
-    vehicle: {
-      plateNo: 'ISB-2024',
-      model: 'Toyota Hilux',
-      status: 'active'
+  // Load driver data on component mount
+  useEffect(() => {
+    loadDriverData();
+  }, []);
+
+  // Add focus listener to refresh data when tab becomes active
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('Overview tab focused, refreshing data...');
+      loadDriverData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadDriverData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      
+      console.log('Loading driver data...');
+      
+      // Load driver profile
+      console.log('Calling DriverAPI.getDriverProfile()...');
+      const profileResponse = await DriverAPI.getDriverProfile();
+      console.log('Profile response:', profileResponse.data);
+      
+      if (profileResponse.data.drivers && profileResponse.data.drivers.length > 0) {
+        const driver = profileResponse.data.drivers[0];
+        setDriverData({
+          name: `${driver.first_name} ${driver.last_name}`,
+          id: driver.id,
+          email: driver.email,
+          phone: driver.phone_number,
+          status: driver.status || 'active',
+          rating: 4.8, // Default rating since it's not in backend yet
+          totalCollections: 156, // Default since it's not in backend yet
+          todayCollections: 8, // Default since it's not in backend yet
+          workAreas: 2, // Default since it's not in backend yet
+          vehicle: {
+            plateNo: 'ISB-2024', // Default since vehicle data needs separate API
+            model: 'Toyota Hilux',
+            status: 'active'
+          }
+        });
+      }
+
+      // Load current tasks
+      console.log('Calling DriverAPI.getCurrentTasks()...');
+      const tasksResponse = await DriverAPI.getCurrentTasks();
+      console.log('Tasks response:', tasksResponse.data);
+      
+      if (tasksResponse.data.tasks) {
+        setCurrentTasks(tasksResponse.data.tasks);
+      } else {
+        // Set default tasks if API doesn't return data
+        setCurrentTasks([
+          {
+            id: 1,
+            bin_id: 'BIN_001',
+            location: { address: 'House #123, Street 5, Sector A' },
+            priority: 'high',
+            status: 'in_progress',
+            fill_level: 85,
+            estimated_time: '30 min'
+          },
+          {
+            id: 2,
+            bin_id: 'BIN_007',
+            location: { address: 'Park Area, Sector A' },
+            priority: 'medium',
+            status: 'pending',
+            fill_level: 30,
+            estimated_time: '15 min'
+          }
+        ]);
+      }
+
+      // Load vehicle data
+      console.log('Calling VehicleAPI.getVehicles()...');
+      const vehicleResponse = await VehicleAPI.getVehicles();
+      console.log('Vehicle response:', vehicleResponse.data);
+      
+      if (vehicleResponse.data.vehicles && vehicleResponse.data.vehicles.length > 0) {
+        const vehicle = vehicleResponse.data.vehicles[0]; // Get first vehicle
+        setVehicleData({
+          plateNo: vehicle.plate_no,
+          model: vehicle.model || 'Vehicle Model',
+          status: vehicle.status || 'active'
+        });
+      } else {
+        // Set default vehicle data if no vehicles found
+        setVehicleData({
+          plateNo: 'ISB-2024',
+          model: 'Toyota Hilux',
+          status: 'active'
+        });
+      }
+    } catch (err) {
+      console.error('Error loading driver data:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      setError('Failed to load driver data');
+      // Set default data on error
+      setDriverData({
+        name: 'Driver',
+        id: 'DRV001',
+        email: 'driver@greenguardian.com',
+        phone: '+92 300 0000000',
+        status: 'active',
+        rating: 4.8,
+        totalCollections: 156,
+        todayCollections: 8,
+        workAreas: 2,
+        vehicle: {
+          plateNo: 'ISB-2024',
+          model: 'Toyota Hilux',
+          status: 'active'
+        }
+      });
+      setVehicleData({
+        plateNo: 'ISB-2024',
+        model: 'Toyota Hilux',
+        status: 'active'
+      });
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
-  const currentTasks = [
-    {
-      id: 1,
-      binId: 'BIN_001',
-      location: 'House #123, Street 5, Sector A',
-      priority: 'high',
-      status: 'in_progress',
-      fillLevel: 85,
-      estimatedTime: '30 min'
-    },
-    {
-      id: 2,
-      binId: 'BIN_007',
-      location: 'Park Area, Sector A',
-      priority: 'medium',
-      status: 'pending',
-      fillLevel: 30,
-      estimatedTime: '15 min'
-    }
-  ];
+  const onRefresh = () => {
+    loadDriverData(true);
+  };
 
-  const renderOverview = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      {/* Welcome Card */}
-      <View style={styles.welcomeCard}>
-        <LinearGradient
-          colors={['#6d28d9', '#8b5cf6']}
-          style={styles.welcomeGradient}
-        >
-          <View style={styles.welcomeContent}>
-            <View style={styles.profileSection}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
+  const renderOverview = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading driver data...</Text>
+        </View>
+      );
+    }
+
+    if (!driverData) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load driver data</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadDriverData}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+        return (
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#6d28d9']}
+                tintColor="#6d28d9"
+              />
+            }
+          >
+        {/* Welcome Card */}
+        <View style={styles.welcomeCard}>
+          <LinearGradient
+            colors={['#6d28d9', '#8b5cf6']}
+            style={styles.welcomeGradient}
+          >
+            <View style={styles.welcomeContent}>
+              <View style={styles.profileSection}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
+                </View>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.welcomeText}>Welcome back!</Text>
+                  <Text style={styles.driverName}>{driverData.name}</Text>
+                  <Text style={styles.driverId}>ID: {driverData.id}</Text>
+                </View>
               </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.welcomeText}>Welcome back!</Text>
-                <Text style={styles.driverName}>{driverData.name}</Text>
-                <Text style={styles.driverId}>ID: {driverData.id}</Text>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
               </View>
             </View>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-      </View>
+          </LinearGradient>
+        </View>
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -98,31 +240,36 @@ export default function DriverDashboard() {
         </View>
       </View>
 
-      {/* Current Tasks */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Current Tasks</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Current Tasks */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Current Tasks</Text>
+                <View style={styles.sectionHeaderRight}>
+                  <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+                    <Text style={styles.refreshText}>🔄</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity>
+                    <Text style={styles.seeAllText}>See All</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
         {currentTasks.map((task) => (
           <View key={task.id} style={styles.taskCard}>
             <View style={styles.taskHeader}>
-              <Text style={styles.binId}>{task.binId}</Text>
+              <Text style={styles.binId}>{task.bin_id || task.binId}</Text>
               <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? '#ef4444' : '#f59e0b' }]}>
                 <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
               </View>
             </View>
-            <Text style={styles.taskLocation}>{task.location}</Text>
+            <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
             <View style={styles.taskFooter}>
               <View style={styles.fillLevelContainer}>
-                <Text style={styles.fillLevelText}>Fill Level: {task.fillLevel}%</Text>
+                <Text style={styles.fillLevelText}>Fill Level: {task.fill_level || task.fillLevel || 0}%</Text>
                 <View style={styles.fillLevelBar}>
-                  <View style={[styles.fillLevelProgress, { width: `${task.fillLevel}%` }]} />
+                  <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
                 </View>
               </View>
-              <Text style={styles.estimatedTime}>{task.estimatedTime}</Text>
+              <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
             </View>
           </View>
         ))}
@@ -133,16 +280,17 @@ export default function DriverDashboard() {
         <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
         <View style={styles.vehicleCard}>
           <View style={styles.vehicleHeader}>
-            <Text style={styles.vehiclePlate}>{driverData.vehicle.plateNo}</Text>
+            <Text style={styles.vehiclePlate}>{vehicleData?.plateNo || 'N/A'}</Text>
             <View style={[styles.vehicleStatusBadge, { backgroundColor: '#10b981' }]}>
-              <Text style={styles.vehicleStatusText}>{driverData.vehicle.status.toUpperCase()}</Text>
+              <Text style={styles.vehicleStatusText}>{(vehicleData?.status || 'active').toUpperCase()}</Text>
             </View>
           </View>
-          <Text style={styles.vehicleModel}>{driverData.vehicle.model}</Text>
+          <Text style={styles.vehicleModel}>{vehicleData?.model || 'Vehicle Model'}</Text>
         </View>
       </View>
     </ScrollView>
-  );
+    );
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -165,28 +313,28 @@ export default function DriverDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {[
-            { key: 'overview', label: 'Overview', icon: '📊' },
-            { key: 'tasks', label: 'Tasks', icon: '📋' },
-            { key: 'workareas', label: 'Areas', icon: '🗺️' },
-            { key: 'performance', label: 'Performance', icon: '📈' },
-            { key: 'profile', label: 'Profile', icon: '👤' }
-          ].map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.activeTab]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={styles.tabIcon}>{tab.icon}</Text>
-              <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      {/* Bottom Tab Navigation */}
+      <View style={styles.bottomTabContainer}>
+        {[
+          { key: 'overview', label: 'Overview', icon: '📊' },
+          { key: 'tasks', label: 'Tasks', icon: '📋' },
+          { key: 'workareas', label: 'Areas', icon: '🗺️' },
+          { key: 'performance', label: 'Performance', icon: '📈' },
+          { key: 'profile', label: 'Profile', icon: '👤' }
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={styles.bottomTab}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <View style={[styles.tabIconContainer, activeTab === tab.key && styles.activeTabIconContainer]}>
+              <Text style={[styles.tabIcon, activeTab === tab.key && styles.activeTabIcon]}>{tab.icon}</Text>
+            </View>
+            <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* Content */}
@@ -229,38 +377,58 @@ const styles = StyleSheet.create({
   notificationIcon: {
     fontSize: 18,
   },
-  tabContainer: {
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  tab: {
+  bottomTabContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#1e293b',
     flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 4,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
   },
-  activeTab: {
+  bottomTab: {
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: 4,
+  },
+  tabIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  activeTabIconContainer: {
     backgroundColor: '#6d28d9',
   },
   tabIcon: {
-    fontSize: 16,
-    marginRight: 6,
+    fontSize: 18,
+    color: '#94a3b8',
+  },
+  activeTabIcon: {
+    color: '#ffffff',
   },
   tabLabel: {
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: '500',
-    color: '#64748b',
+    color: '#94a3b8',
+    textAlign: 'center',
   },
   activeTabLabel: {
     color: '#ffffff',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 80, // Add padding to prevent content from being hidden behind bottom tabs
   },
   welcomeCard: {
     borderRadius: 16,
@@ -279,6 +447,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingRight: 8, // Add padding to prevent overflow
   },
   profileSection: {
     flexDirection: 'row',
@@ -318,14 +487,16 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 12,
+    maxWidth: 80, // Prevent overflow
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#ffffff',
+    textAlign: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -364,6 +535,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  sectionHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  refreshBtn: {
+    padding: 4,
+  },
+  refreshText: {
+    fontSize: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -474,5 +656,37 @@ const styles = StyleSheet.create({
   vehicleModel: {
     fontSize: 14,
     color: '#64748b',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginBottom: 16,
+  },
+  retryBtn: {
+    backgroundColor: '#6d28d9',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

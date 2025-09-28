@@ -1,36 +1,62 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { DriverAPI } from '@/services/driver';
+import { useAuth } from '@/context/AuthContext';
 
 export default function WorkAreasTab() {
-  const workAreas = [
-    {
-      id: 1,
-      name: 'Sector A',
-      description: 'Residential area with 150 households',
-      bins: 25,
-      status: 'active',
-      estimatedTime: '4 hours',
-      priority: 'medium'
-    },
-    {
-      id: 2,
-      name: 'Sector B',
-      description: 'Commercial area with shops and offices',
-      bins: 18,
-      status: 'active',
-      estimatedTime: '3 hours',
-      priority: 'high'
-    },
-    {
-      id: 3,
-      name: 'Sector C',
-      description: 'Industrial zone with warehouses',
-      bins: 32,
-      status: 'inactive',
-      estimatedTime: '5 hours',
-      priority: 'low'
+  const { state } = useAuth();
+  const [workAreas, setWorkAreas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadWorkAreas();
+  }, []);
+
+  const loadWorkAreas = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await DriverAPI.getWorkAreas(state.user?.id || 1);
+      if (response.data.workAreas) {
+        setWorkAreas(response.data.workAreas);
+      }
+    } catch (err) {
+      console.error('Error loading work areas:', err);
+      setError('Failed to load work areas');
+      // Set default work areas on error
+      setWorkAreas([
+        {
+          id: 1,
+          area_name: 'Sector A',
+          area_description: 'Residential area with 150 households',
+          total_bins: 25,
+          status: 'active',
+          estimated_collection_time: '4 hours',
+          priority: 'medium'
+        },
+        {
+          id: 2,
+          area_name: 'Sector B',
+          area_description: 'Commercial area with shops and offices',
+          total_bins: 18,
+          status: 'active',
+          estimated_collection_time: '3 hours',
+          priority: 'high'
+        }
+      ]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleViewRoute = (areaId) => {
+    Alert.alert('View Route', `Viewing route for area ${areaId}`);
+  };
+
+  const handleStartCollection = (areaId) => {
+    Alert.alert('Start Collection', `Starting collection for area ${areaId}`);
+  };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -45,20 +71,34 @@ export default function WorkAreasTab() {
     return status === 'active' ? '#10b981' : '#64748b';
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading work areas...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Assigned Work Areas</Text>
-          <TouchableOpacity>
-            <Text style={styles.mapViewText}>Map View</Text>
+          <TouchableOpacity onPress={loadWorkAreas}>
+            <Text style={styles.mapViewText}>Refresh</Text>
           </TouchableOpacity>
         </View>
+        
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
         
         {workAreas.map((area) => (
           <View key={area.id} style={styles.workAreaCard}>
             <View style={styles.workAreaHeader}>
-              <Text style={styles.workAreaName}>{area.name}</Text>
+              <Text style={styles.workAreaName}>{area.area_name}</Text>
               <View style={styles.badgeContainer}>
                 <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(area.priority) }]}>
                   <Text style={styles.priorityText}>{area.priority.toUpperCase()}</Text>
@@ -69,15 +109,15 @@ export default function WorkAreasTab() {
               </View>
             </View>
             
-            <Text style={styles.workAreaDescription}>{area.description}</Text>
+            <Text style={styles.workAreaDescription}>{area.area_description}</Text>
             
             <View style={styles.workAreaStats}>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{area.bins}</Text>
+                <Text style={styles.statNumber}>{area.total_bins}</Text>
                 <Text style={styles.statLabel}>Total Bins</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{area.estimatedTime}</Text>
+                <Text style={styles.statNumber}>{area.estimated_collection_time}</Text>
                 <Text style={styles.statLabel}>Est. Time</Text>
               </View>
               <View style={styles.statItem}>
@@ -87,10 +127,16 @@ export default function WorkAreasTab() {
             </View>
             
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.viewRouteBtn}>
+              <TouchableOpacity 
+                style={styles.viewRouteBtn}
+                onPress={() => handleViewRoute(area.id)}
+              >
                 <Text style={styles.viewRouteText}>View Route</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.startCollectionBtn}>
+              <TouchableOpacity 
+                style={styles.startCollectionBtn}
+                onPress={() => handleStartCollection(area.id)}
+              >
                 <Text style={styles.startCollectionText}>Start Collection</Text>
               </TouchableOpacity>
             </View>
@@ -225,5 +271,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#ffffff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
   },
 });

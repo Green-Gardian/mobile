@@ -24,16 +24,17 @@ function RouterStack() {
     isAuthed 
   });
 
+  // Hide splash screen immediately when authentication state is determined
   useEffect(() => {
-    // Only hide splash screen after authentication state is determined
     if (!state.loading) {
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-      }, 2000); // Reduced to 2 seconds
-
-      return () => clearTimeout(timer);
+      setShowSplash(false);
     }
   }, [state.loading]);
+
+  // Reset splash screen when auth state changes
+  useEffect(() => {
+    setShowSplash(true);
+  }, [isAuthed]);
 
   // Show splash screen while loading or during splash delay
   if (showSplash || state.loading) {
