@@ -1,6 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import * as SecureStore from '@/utils/secureStore';
 import { AuthAPI, clearTokens, getRefreshToken, saveTokens } from '@/services/api';
+import * as SecureStore from '@/utils/secureStore';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const AuthContext = createContext(undefined);
 
@@ -10,15 +10,32 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     (async () => {
       try {
-        const [access, refresh] = await Promise.all([
+        const [access, refresh, userData] = await Promise.all([
           SecureStore.getItemAsync('gg_access_token'),
           SecureStore.getItemAsync('gg_refresh_token'),
+          SecureStore.getItemAsync('gg_user_data'),
         ]);
-        console.log('Loaded tokens:', { access: !!access, refresh: !!refresh });
-        setState((s) => ({ ...s, accessToken: access, refreshToken: refresh, loading: false }));
+        console.log('Loaded tokens:', { access: !!access, refresh: !!refresh, user: !!userData });
+        
+        let user = null;
+        if (userData) {
+          try {
+            user = JSON.parse(userData);
+          } catch (e) {
+            console.log('Error parsing user data:', e);
+          }
+        }
+        
+        setState((s) => ({ 
+          ...s, 
+          accessToken: access, 
+          refreshToken: refresh, 
+          user: user,
+          loading: false 
+        }));
       } catch (error) {
         console.log('Error loading tokens:', error);
-        setState((s) => ({ ...s, accessToken: null, refreshToken: null, loading: false }));
+        setState((s) => ({ ...s, accessToken: null, refreshToken: null, user: null, loading: false }));
       }
     })();
   }, []);
@@ -30,7 +47,12 @@ export const AuthProvider = ({ children }) => {
       throw new Error('This app is available only for drivers and residents');
     }
     await saveTokens(access_token, refresh_token);
-    setState({ accessToken: access_token, refreshToken: refresh_token, user: { username, role, is_verified }, loading: false });
+    
+    // Save user data to secure storage
+    const userData = { username, role, is_verified };
+    await SecureStore.setItemAsync('gg_user_data', JSON.stringify(userData));
+    
+    setState({ accessToken: access_token, refreshToken: refresh_token, user: userData, loading: false });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -39,6 +61,8 @@ export const AuthProvider = ({ children }) => {
       if (token) await AuthAPI.signOut(token);
     } catch {}
     await clearTokens();
+    // Clear user data from secure storage
+    await SecureStore.deleteItemAsync('gg_user_data');
     setState({ accessToken: null, refreshToken: null, user: null, loading: false });
   }, [state.refreshToken]);
 

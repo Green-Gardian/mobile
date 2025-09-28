@@ -1,7 +1,7 @@
 import * as SecureStore from '@/utils/secureStore';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.10.4:3001';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.198.105.67:3001';
 
 const ACCESS_TOKEN_KEY = 'gg_access_token';
 const REFRESH_TOKEN_KEY = 'gg_refresh_token';
@@ -16,6 +16,7 @@ export async function saveTokens(accessToken, refreshToken) {
 export async function clearTokens() {
   await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
   await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+  await SecureStore.deleteItemAsync('gg_user_data');
 }
 
 export async function getAccessToken() {

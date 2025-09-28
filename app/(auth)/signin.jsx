@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Link, useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Link, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -17,7 +17,8 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      router.replace('/');
+      // Navigation will be handled automatically by the auth state change
+      // The RouterStack component will redirect to (tabs) when user is authenticated
     } catch (e) {
       setError(e?.response?.data?.message || 'Unable to sign in');
     } finally {

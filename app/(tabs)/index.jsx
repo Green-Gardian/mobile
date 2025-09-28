@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '@/context/AuthContext';
-import TasksTab from '@/components/TasksTab';
-import WorkAreasTab from '@/components/WorkAreasTab';
 import PerformanceTab from '@/components/PerformanceTab';
 import ProfileTab from '@/components/ProfileTab';
+import TasksTab from '@/components/TasksTab';
+import WorkAreasTab from '@/components/WorkAreasTab';
+import { useAuth } from '@/context/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-export default function DriverDashboard() {
+export default function HomeScreen() {
   const { signOut, state } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Check if user is driver or resident
+  const isDriver = state.user?.role === 'driver';
+  const isResident = state.user?.role === 'resident';
 
   // Mock data - replace with actual API calls later
   const driverData = {
@@ -29,6 +33,18 @@ export default function DriverDashboard() {
       model: 'Toyota Hilux',
       status: 'active'
     }
+  };
+
+  const residentData = {
+    name: state.user?.username || 'Resident',
+    id: 'RES001',
+    email: 'resident@example.com',
+    phone: '+92 300 1234567',
+    status: 'active',
+    totalRequests: 12,
+    pendingRequests: 2,
+    completedRequests: 10,
+    nextCollection: 'Tomorrow 9:00 AM'
   };
 
   const currentTasks = [
@@ -52,7 +68,7 @@ export default function DriverDashboard() {
     }
   ];
 
-  const renderOverview = () => (
+  const renderDriverOverview = () => (
     <ScrollView showsVerticalScrollIndicator={false}>
       {/* Welcome Card */}
       <View style={styles.welcomeCard}>
@@ -144,14 +160,104 @@ export default function DriverDashboard() {
     </ScrollView>
   );
 
+  const renderResidentOverview = () => (
+    <ScrollView showsVerticalScrollIndicator={false}>
+      {/* Welcome Card */}
+      <View style={styles.welcomeCard}>
+        <LinearGradient
+          colors={['#10b981', '#34d399']}
+          style={styles.welcomeGradient}
+        >
+          <View style={styles.welcomeContent}>
+            <View style={styles.profileSection}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{residentData.name.split(' ').map(n => n[0]).join('')}</Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.welcomeText}>Welcome back!</Text>
+                <Text style={styles.driverName}>{residentData.name}</Text>
+                <Text style={styles.driverId}>ID: {residentData.id}</Text>
+              </View>
+            </View>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusText}>{residentData.status.toUpperCase()}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Stats Cards */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{residentData.totalRequests}</Text>
+          <Text style={styles.statLabel}>Total Requests</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{residentData.pendingRequests}</Text>
+          <Text style={styles.statLabel}>Pending</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{residentData.completedRequests}</Text>
+          <Text style={styles.statLabel}>Completed</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>📅</Text>
+          <Text style={styles.statLabel}>Next Collection</Text>
+        </View>
+      </View>
+
+      {/* Next Collection Info */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Next Collection</Text>
+        <View style={styles.taskCard}>
+          <View style={styles.taskHeader}>
+            <Text style={styles.binId}>Collection Scheduled</Text>
+            <View style={[styles.priorityBadge, { backgroundColor: '#10b981' }]}>
+              <Text style={styles.priorityText}>CONFIRMED</Text>
+            </View>
+          </View>
+          <Text style={styles.taskLocation}>{residentData.nextCollection}</Text>
+          <View style={styles.taskFooter}>
+            <Text style={styles.fillLevelText}>Status: Scheduled</Text>
+            <Text style={styles.estimatedTime}>Regular pickup</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity style={styles.quickActionButton}>
+            <Text style={styles.quickActionIcon}>📞</Text>
+            <Text style={styles.quickActionText}>Request Service</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionButton}>
+            <Text style={styles.quickActionIcon}>📍</Text>
+            <Text style={styles.quickActionText}>Update Address</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickActionButton}>
+            <Text style={styles.quickActionIcon}>💬</Text>
+            <Text style={styles.quickActionText}>Contact Support</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ScrollView>
+  );
+
   const renderContent = () => {
+    if (isResident) {
+      return renderResidentOverview();
+    }
+    
+    // Driver content
     switch (activeTab) {
-      case 'overview': return renderOverview();
+      case 'overview': return renderDriverOverview();
       case 'tasks': return <TasksTab />;
       case 'workareas': return <WorkAreasTab />;
       case 'performance': return <PerformanceTab />;
       case 'profile': return <ProfileTab />;
-      default: return renderOverview();
+      default: return renderDriverOverview();
     }
   };
 
@@ -159,35 +265,39 @@ export default function DriverDashboard() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Driver Dashboard</Text>
+        <Text style={styles.headerTitle}>
+          {isDriver ? 'Driver Dashboard' : 'Resident Dashboard'}
+        </Text>
         <TouchableOpacity style={styles.notificationBtn}>
           <Text style={styles.notificationIcon}>🔔</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {[
-            { key: 'overview', label: 'Overview', icon: '📊' },
-            { key: 'tasks', label: 'Tasks', icon: '📋' },
-            { key: 'workareas', label: 'Areas', icon: '🗺️' },
-            { key: 'performance', label: 'Performance', icon: '📈' },
-            { key: 'profile', label: 'Profile', icon: '👤' }
-          ].map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.activeTab]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={styles.tabIcon}>{tab.icon}</Text>
-              <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {/* Tab Navigation - Only for Drivers */}
+      {isDriver && (
+        <View style={styles.tabContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {[
+              { key: 'overview', label: 'Overview', icon: '📊' },
+              { key: 'tasks', label: 'Tasks', icon: '📋' },
+              { key: 'workareas', label: 'Areas', icon: '🗺️' },
+              { key: 'performance', label: 'Performance', icon: '📈' },
+              { key: 'profile', label: 'Profile', icon: '👤' }
+            ].map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+                onPress={() => setActiveTab(tab.key)}
+              >
+                <Text style={styles.tabIcon}>{tab.icon}</Text>
+                <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Content */}
       <View style={styles.content}>
@@ -474,5 +584,33 @@ const styles = StyleSheet.create({
   vehicleModel: {
     fontSize: 14,
     color: '#64748b',
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  quickActionIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });
