@@ -17,8 +17,7 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
-      // Navigation will be handled automatically by the auth state change
-      // The RouterStack component will redirect to (tabs) when user is authenticated
+      // Navigation will be handled automatically by _layout.jsx based on auth state
     } catch (e) {
       setError(e?.response?.data?.message || 'Unable to sign in');
     } finally {

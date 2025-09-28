@@ -1,36 +1,63 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { DriverAPI } from '@/services/driver';
 
 export default function TasksTab() {
-  const currentTasks = [
-    {
-      id: 1,
-      binId: 'BIN_001',
-      location: 'House #123, Street 5, Sector A',
-      priority: 'high',
-      status: 'in_progress',
-      fillLevel: 85,
-      estimatedTime: '30 min'
-    },
-    {
-      id: 2,
-      binId: 'BIN_007',
-      location: 'Park Area, Sector A',
-      priority: 'medium',
-      status: 'pending',
-      fillLevel: 30,
-      estimatedTime: '15 min'
-    },
-    {
-      id: 3,
-      binId: 'BIN_015',
-      location: 'Office Complex, Sector B',
-      priority: 'low',
-      status: 'completed',
-      fillLevel: 0,
-      estimatedTime: '20 min'
+  const [currentTasks, setCurrentTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await DriverAPI.getCurrentTasks();
+      if (response.data.tasks) {
+        setCurrentTasks(response.data.tasks);
+      }
+    } catch (err) {
+      console.error('Error loading tasks:', err);
+      setError('Failed to load tasks');
+      // Set default tasks on error
+      setCurrentTasks([
+        {
+          id: 1,
+          bin_id: 'BIN_001',
+          location: { address: 'House #123, Street 5, Sector A' },
+          priority: 'high',
+          status: 'in_progress',
+          fill_level: 85,
+          estimated_time: '30 min'
+        },
+        {
+          id: 2,
+          bin_id: 'BIN_007',
+          location: { address: 'Park Area, Sector A' },
+          priority: 'medium',
+          status: 'pending',
+          fill_level: 30,
+          estimated_time: '15 min'
+        }
+      ]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleUpdateTaskStatus = async (taskId, newStatus) => {
+    try {
+      await DriverAPI.updateTaskStatus(taskId, { status: newStatus });
+      Alert.alert('Success', 'Task status updated successfully!');
+      loadTasks(); // Reload tasks
+    } catch (err) {
+      console.error('Error updating task status:', err);
+      Alert.alert('Error', 'Failed to update task status');
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -41,20 +68,34 @@ export default function TasksTab() {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading tasks...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>All Tasks</Text>
-          <TouchableOpacity>
-            <Text style={styles.filterText}>Filter</Text>
+          <TouchableOpacity onPress={loadTasks}>
+            <Text style={styles.filterText}>Refresh</Text>
           </TouchableOpacity>
         </View>
+        
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
         
         {currentTasks.map((task) => (
           <View key={task.id} style={styles.taskCard}>
             <View style={styles.taskHeader}>
-              <Text style={styles.binId}>{task.binId}</Text>
+              <Text style={styles.binId}>{task.bin_id}</Text>
               <View style={styles.statusContainer}>
                 <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#10b981' }]}>
                   <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
@@ -65,21 +106,24 @@ export default function TasksTab() {
               </View>
             </View>
             
-            <Text style={styles.taskLocation}>{task.location}</Text>
+            <Text style={styles.taskLocation}>{task.location?.address || 'Location not available'}</Text>
             
             <View style={styles.taskFooter}>
               <View style={styles.fillLevelContainer}>
-                <Text style={styles.fillLevelText}>Fill Level: {task.fillLevel}%</Text>
+                <Text style={styles.fillLevelText}>Fill Level: {task.fill_level || 0}%</Text>
                 <View style={styles.fillLevelBar}>
-                  <View style={[styles.fillLevelProgress, { width: `${task.fillLevel}%` }]} />
+                  <View style={[styles.fillLevelProgress, { width: `${task.fill_level || 0}%` }]} />
                 </View>
               </View>
-              <Text style={styles.estimatedTime}>{task.estimatedTime}</Text>
+              <Text style={styles.estimatedTime}>{task.estimated_time || 'N/A'}</Text>
             </View>
             
             {task.status !== 'completed' && (
-              <TouchableOpacity style={styles.updateStatusBtn}>
-                <Text style={styles.updateStatusText}>Update Status</Text>
+              <TouchableOpacity 
+                style={styles.updateStatusBtn}
+                onPress={() => handleUpdateTaskStatus(task.id, 'completed')}
+              >
+                <Text style={styles.updateStatusText}>Mark Complete</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -204,5 +248,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#ffffff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+  errorContainer: {
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
   },
 });

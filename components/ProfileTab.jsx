@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { DriverAPI } from '@/services/driver';
 
 export default function ProfileTab() {
   const { signOut, state } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    email: 'john.doe@greenguardian.com',
-    phone: '+92 300 1234567',
+    name: 'Driver',
+    email: 'driver@greenguardian.com',
+    phone: '+92 300 0000000',
     id: 'DRV001',
     status: 'active',
     joinDate: '2024-01-15',
@@ -16,9 +18,48 @@ export default function ProfileTab() {
     emergencyContact: '+92 300 9876543'
   });
 
-  const handleUpdateProfile = () => {
-    Alert.alert('Success', 'Profile updated successfully!');
-    setIsEditing(false);
+  useEffect(() => {
+    loadProfileData();
+  }, []);
+
+  const loadProfileData = async () => {
+    try {
+      setLoading(true);
+      const response = await DriverAPI.getDriverProfile();
+      if (response.data.drivers && response.data.drivers.length > 0) {
+        const driver = response.data.drivers[0];
+        setProfileData({
+          name: `${driver.first_name} ${driver.last_name}`,
+          email: driver.email,
+          phone: driver.phone_number,
+          id: driver.id,
+          status: driver.status || 'active',
+          joinDate: driver.created_at ? new Date(driver.created_at).toISOString().split('T')[0] : '2024-01-15',
+          licenseNumber: 'DL-2024-001', // Default since not in backend
+          emergencyContact: '+92 300 9876543' // Default since not in backend
+        });
+      }
+    } catch (err) {
+      console.error('Error loading profile data:', err);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      await DriverAPI.updateDriver(profileData.id, {
+        fullName: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone
+      });
+      Alert.alert('Success', 'Profile updated successfully!');
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      Alert.alert('Error', 'Failed to update profile');
+    }
   };
 
   const handleChangePassword = () => {
@@ -35,6 +76,14 @@ export default function ProfileTab() {
       ]
     );
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
@@ -410,5 +459,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#ffffff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
   },
 });
