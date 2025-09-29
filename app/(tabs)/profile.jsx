@@ -1,23 +1,23 @@
 // app/(tabs)/profile.tsx
-import { ResidentAPI } from '@/services/residentAPI';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ResidentAPI } from '../../services/residentAPI';
 
 export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);

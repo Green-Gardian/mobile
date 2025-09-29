@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { DriverAPI } from '@/services/driver';
-import { useAuth } from '@/context/AuthContext';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { DriverAPI } from '../services/driver';
 
 export default function WorkAreasTab() {
   const { state } = useAuth();

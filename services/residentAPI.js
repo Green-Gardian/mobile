@@ -1,5 +1,5 @@
 // services/residentAPI.js
-import { getAccessToken } from '@/services/api';
+import { getAccessToken } from '../services/api';
 
 const BASE_URL = 'http://localhost:3001/services';
 

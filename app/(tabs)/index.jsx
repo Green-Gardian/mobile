@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, RefreshControl } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth } from '@/context/AuthContext';
-import { DriverAPI } from '@/services/driver';
-import { VehicleAPI } from '@/services/vehicle';
-import TasksTab from '@/components/TasksTab';
-import WorkAreasTab from '@/components/WorkAreasTab';
-import PerformanceTab from '@/components/PerformanceTab';
-import ProfileTab from '@/components/ProfileTab';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
+import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import PerformanceTab from '../../components/PerformanceTab';
+import ProfileTab from '../../components/ProfileTab';
+import TasksTab from '../../components/TasksTab';
+import WorkAreasTab from '../../components/WorkAreasTab';
+import { useAuth } from '../../context/AuthContext';
+import { DriverAPI } from '../../services/driver';
+import { VehicleAPI } from '../../services/vehicle';
 
 const { width } = Dimensions.get('window');
 
@@ -252,7 +252,7 @@ export default function HomeScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{driverData.todayCollections}</Text>
-            <Text style={styles.statLabel}>Today's Collections</Text>
+            <Text style={styles.statLabel}>Today Collections</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{driverData.totalCollections}</Text>

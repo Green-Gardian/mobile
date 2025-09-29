@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { AuthAPI } from '@/services/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Link, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AuthAPI } from '../../services/api';
 
 export default function Forgot() {
   const router = useRouter();
@@ -51,7 +51,7 @@ export default function Forgot() {
               <Text style={styles.logoIcon}>🌱</Text>
             </View>
             <Text style={styles.title}>Forgot Password?</Text>
-            <Text style={styles.subtitle}>Enter your email and we'll send you a reset OTP</Text>
+            <Text style={styles.subtitle}>Enter your email and we ll send you a reset OTP</Text>
           </View>
 
           {/* Form Section */}

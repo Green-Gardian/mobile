@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { useAuth } from '@/context/AuthContext';
-import { DriverAPI } from '@/services/driver';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { DriverAPI } from '../services/driver';
 
 export default function ProfileTab() {
   const { signOut, state } = useAuth();

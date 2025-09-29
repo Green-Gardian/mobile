@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { DriverAPI } from '@/services/driver';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { DriverAPI } from '../services/driver';
 
 export default function TasksTab() {
   const [currentTasks, setCurrentTasks] = useState([]);

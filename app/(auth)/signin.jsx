@@ -1,8 +1,8 @@
-import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -19,6 +19,7 @@ export default function SignIn() {
       await signIn(email.trim(), password);
       // Navigation will be handled automatically by _layout.jsx based on auth state
     } catch (e) {
+      console.error('SignIn error:', e);
       setError(e?.response?.data?.message || 'Unable to sign in');
     } finally {
       setLoading(false);

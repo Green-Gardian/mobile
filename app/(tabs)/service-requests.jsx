@@ -1,25 +1,25 @@
 // app/(tabs)/service-requests.tsx
-import { ResidentAPI, ServiceRequestUtils } from '@/services/residentAPI';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 
 const { width } = Dimensions.get('window');
 
@@ -291,7 +291,7 @@ export default function ServiceRequestsScreen() {
       <Ionicons name="document-text-outline" size={64} color="#ccc" />
       <Text style={styles.emptyTitle}>No Service Requests</Text>
       <Text style={styles.emptyText}>
-        You haven't created any service requests yet.
+        You havent created any service requests yet.
       </Text>
       <TouchableOpacity
         style={styles.createButton}
