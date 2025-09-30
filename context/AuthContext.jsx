@@ -57,6 +57,9 @@ export const AuthProvider = ({ children }) => {
     await SecureStore.setItemAsync('gg_user_data', JSON.stringify(userData));
     
     setState({ accessToken: access_token, refreshToken: refresh_token, user: userData, loading: false });
+    
+    // Return success to indicate successful login
+    return { success: true, user: userData };
   }, []);
 
   const signOut = useCallback(async () => {
@@ -68,6 +71,9 @@ export const AuthProvider = ({ children }) => {
     // Clear user data from secure storage
     await SecureStore.deleteItemAsync('gg_user_data');
     setState({ accessToken: null, refreshToken: null, user: null, loading: false });
+    
+    // Return success to indicate successful logout
+    return { success: true };
   }, [state.refreshToken]);
 
   const value = useMemo(() => ({ state, signIn, signOut }), [state, signIn, signOut]);

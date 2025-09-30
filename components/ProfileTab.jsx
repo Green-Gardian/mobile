@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
@@ -5,6 +6,7 @@ import { DriverAPI } from '../services/driver';
 
 export default function ProfileTab() {
   const { signOut, state } = useAuth();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState({
@@ -72,7 +74,21 @@ export default function ProfileTab() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: signOut }
+        { 
+          text: 'Sign Out', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              const result = await signOut();
+              if (result.success) {
+                // Force navigation to auth screen after successful logout
+                router.replace('/(auth)/signin');
+              }
+            } catch (error) {
+              console.error('Sign out error:', error);
+            }
+          }
+        }
       ]
     );
   };

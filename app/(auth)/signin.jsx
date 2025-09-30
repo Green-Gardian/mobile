@@ -16,8 +16,11 @@ export default function SignIn() {
     setError('');
     setLoading(true);
     try {
-      await signIn(email.trim(), password);
-      // Navigation will be handled automatically by _layout.jsx based on auth state
+      const result = await signIn(email.trim(), password);
+      if (result.success) {
+        // Force navigation to tabs after successful login
+        router.replace('/(tabs)');
+      }
     } catch (e) {
       console.error('SignIn error:', e);
       setError(e?.response?.data?.message || 'Unable to sign in');

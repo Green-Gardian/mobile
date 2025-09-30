@@ -1,6 +1,7 @@
 // app/(tabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,6 +23,7 @@ import { ResidentAPI } from '../../services/residentAPI';
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -420,7 +422,17 @@ export default function ProfileScreen() {
 
             <TouchableOpacity 
               style={styles.signOutButton}
-              onPress={signOut}
+              onPress={async () => {
+                try {
+                  const result = await signOut();
+                  if (result.success) {
+                    // Force navigation to auth screen after successful logout
+                    router.replace('/(auth)/signin');
+                  }
+                } catch (error) {
+                  console.error('Sign out error:', error);
+                }
+              }}
             >
               <Ionicons name="log-out-outline" size={20} color="#6d28d9" />
               <Text style={styles.signOutButtonText}>Sign Out</Text>
