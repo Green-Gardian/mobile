@@ -1,7 +1,7 @@
 // services/residentAPI.js
 import { getAccessToken } from '../services/api';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.6:3001';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 const BASE_URL = `${API_BASE}/services`;
 
 // Generic API call function with error handling

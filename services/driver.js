@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAccessToken } from './api';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.6:3001';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 // Create driver API instance
 const driverApi = axios.create({
