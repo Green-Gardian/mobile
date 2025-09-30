@@ -8,6 +8,7 @@ import TasksTab from '../../components/TasksTab';
 import WorkAreasTab from '../../components/WorkAreasTab';
 import { useAuth } from '../../context/AuthContext';
 import { DriverAPI } from '../../services/driver';
+import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 import { VehicleAPI } from '../../services/vehicle';
 
 const { width } = Dimensions.get('window');
@@ -179,17 +180,39 @@ export default function HomeScreen() {
     }
   };
 
-  // Resident data
-  const residentData = {
-    name: state.user?.username || 'Resident',
-    id: 'RES001',
-    email: 'resident@example.com',
-    phone: '+92 300 1234567',
-    status: 'active',
-    totalRequests: 12,
-    pendingRequests: 2,
-    completedRequests: 10,
-    nextCollection: 'Tomorrow 9:00 AM'
+  // Resident-specific state
+  const [residentLoading, setResidentLoading] = useState(isResident);
+  const [residentProfile, setResidentProfile] = useState(null);
+  const [residentRequests, setResidentRequests] = useState([]);
+  const [residentError, setResidentError] = useState(null);
+
+  useEffect(() => {
+    if (isResident && state.user) {
+      loadResidentData();
+    } else {
+      setResidentLoading(false);
+    }
+  }, [isResident, state.user]);
+
+  const loadResidentData = async () => {
+    try {
+      setResidentLoading(true);
+      setResidentError(null);
+
+      const [profileResp, requestsResp] = await Promise.all([
+        ResidentAPI.getUserProfile(),
+        ResidentAPI.getUserServiceRequests(),
+      ]);
+
+      setResidentProfile(profileResp?.data || profileResp || null);
+      const requests = requestsResp?.data || requestsResp || [];
+      setResidentRequests(Array.isArray(requests) ? requests : (requests.items || []));
+    } catch (e) {
+      console.log('Error loading resident data:', e);
+      setResidentError('Failed to load dashboard');
+    } finally {
+      setResidentLoading(false);
+    }
   };
 
   const renderDriverOverview = () => {
@@ -322,6 +345,19 @@ export default function HomeScreen() {
 
   const renderResidentOverview = () => (
     <ScrollView showsVerticalScrollIndicator={false}>
+      {residentLoading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
+        </View>
+      ) : residentError ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{residentError}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadResidentData}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
       {/* Welcome Card */}
       <View style={styles.welcomeCard}>
         <LinearGradient
@@ -331,16 +367,16 @@ export default function HomeScreen() {
           <View style={styles.welcomeContent}>
             <View style={styles.profileSection}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{residentData.name.split(' ').map(n => n[0]).join('')}</Text>
+                <Text style={styles.avatarText}>{(residentProfile?.full_name || state.user?.username || 'R').split(' ').map(n => n[0]).join('')}</Text>
               </View>
               <View style={styles.profileInfo}>
                 <Text style={styles.welcomeText}>Welcome back!</Text>
-                <Text style={styles.driverName}>{residentData.name}</Text>
-                <Text style={styles.driverId}>ID: {residentData.id}</Text>
+                <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
+                {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
               </View>
             </View>
             <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{residentData.status.toUpperCase()}</Text>
+              <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -349,15 +385,15 @@ export default function HomeScreen() {
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{residentData.totalRequests}</Text>
+          <Text style={styles.statNumber}>{residentRequests.length}</Text>
           <Text style={styles.statLabel}>Total Requests</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{residentData.pendingRequests}</Text>
+          <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'pending').length}</Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{residentData.completedRequests}</Text>
+          <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'completed').length}</Text>
           <Text style={styles.statLabel}>Completed</Text>
         </View>
         <View style={styles.statCard}>
@@ -376,7 +412,7 @@ export default function HomeScreen() {
               <Text style={styles.priorityText}>CONFIRMED</Text>
             </View>
           </View>
-          <Text style={styles.taskLocation}>{residentData.nextCollection}</Text>
+          <Text style={styles.taskLocation}>{ServiceRequestUtils.formatDateTime(residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.preferredDate) || 'N/A'}</Text>
           <View style={styles.taskFooter}>
             <Text style={styles.fillLevelText}>Status: Scheduled</Text>
             <Text style={styles.estimatedTime}>Regular pickup</Text>
@@ -402,6 +438,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+        </>
+      )}
     </ScrollView>
   );
 
@@ -500,12 +538,12 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#e9d5ff',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#4c1d95',
   },
   notificationBtn: {
     width: 40,
@@ -523,14 +561,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#ffffff',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingBottom: 20,
+    paddingVertical: 10,
+    paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: '#334155',
+    borderTopColor: '#e9d5ff',
   },
   bottomTab: {
     alignItems: 'center',
@@ -546,30 +584,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   activeTabIconContainer: {
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#ede9fe',
   },
   tabIcon: {
     fontSize: 18,
-    color: '#94a3b8',
+    color: '#a78bfa',
   },
   activeTabIcon: {
-    color: '#ffffff',
+    color: '#6d28d9',
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: '500',
-    color: '#94a3b8',
+    fontWeight: '600',
+    color: '#a78bfa',
     textAlign: 'center',
   },
   activeTabLabel: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: '#6d28d9',
+    fontWeight: '700',
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 80, // Add padding to prevent content from being hidden behind bottom tabs
+    paddingBottom: 120,
   },
   welcomeCard: {
     borderRadius: 16,

@@ -21,6 +21,9 @@ export const AuthProvider = ({ children }) => {
         if (userData) {
           try {
             user = JSON.parse(userData);
+            if (user && user.role) {
+              user.role = String(user.role).toLowerCase();
+            }
           } catch (e) {
             console.log('Error parsing user data:', e);
           }
@@ -43,13 +46,14 @@ export const AuthProvider = ({ children }) => {
   const signIn = useCallback(async (email, password) => {
     const res = await AuthAPI.signIn(email, password);
     const { access_token, refresh_token, username, role, is_verified } = res.data;
-    if (role !== 'driver' && role !== 'resident') {
+    const normalizedRole = String(role).toLowerCase();
+    if (normalizedRole !== 'driver' && normalizedRole !== 'resident') {
       throw new Error('This app is available only for drivers and residents');
     }
     await saveTokens(access_token, refresh_token);
     
     // Save user data to secure storage
-    const userData = { username, role, is_verified };
+    const userData = { username, role: normalizedRole, is_verified };
     await SecureStore.setItemAsync('gg_user_data', JSON.stringify(userData));
     
     setState({ accessToken: access_token, refreshToken: refresh_token, user: userData, loading: false });

@@ -1,7 +1,7 @@
 // app/(tabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,9 +17,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
 import { ResidentAPI } from '../../services/residentAPI';
 
 export default function ProfileScreen() {
+  const { signOut } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -53,6 +55,26 @@ export default function ProfileScreen() {
     is_default: false,
   });
 
+  // DOB pickers state (fallback when no native date picker)
+  const [dobYear, setDobYear] = useState('');
+  const [dobMonth, setDobMonth] = useState('');
+  const [dobDay, setDobDay] = useState('');
+
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    const arr = [];
+    for (let y = current; y >= 1940; y--) arr.push(String(y));
+    return arr;
+  }, []);
+
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')), []);
+  const daysInSelectedMonth = useMemo(() => {
+    const y = parseInt(dobYear || '2000', 10);
+    const m = parseInt(dobMonth || '01', 10);
+    const days = new Date(y, m, 0).getDate();
+    return Array.from({ length: days }, (_, i) => String(i + 1).padStart(2, '0'));
+  }, [dobYear, dobMonth]);
+
   useEffect(() => {
     loadProfileData();
   }, []);
@@ -66,7 +88,7 @@ export default function ProfileScreen() {
       ]);
       
       if (profileResponse.success && profileResponse.data) {
-        setProfile({
+        const nextProfile = {
           ...profile,
           ...profileResponse.data,
           notification_preferences: profileResponse.data.notification_preferences || {
@@ -74,7 +96,15 @@ export default function ProfileScreen() {
             sms: true,
             push: true,
           },
-        });
+        };
+        setProfile(nextProfile);
+        // Initialize DOB pickers
+        const dob = String(nextProfile.date_of_birth || '');
+        if (dob && /^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+          setDobYear(dob.slice(0, 4));
+          setDobMonth(dob.slice(5, 7));
+          setDobDay(dob.slice(8, 10));
+        }
       }
       
       if (addressResponse.success && addressResponse.data) {
@@ -194,15 +224,59 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Personal Information</Text>
           </View>
           
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date of Birth</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.date_of_birth}
-              onChangeText={(text) => setProfile({...profile, date_of_birth: text})}
-              placeholder="YYYY-MM-DD"
-            />
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Date of Birth</Text>
+          <View style={styles.dobRow}>
+            <View style={[styles.pickerContainer, styles.dobPicker]}>
+              <Picker
+                selectedValue={dobYear}
+                onValueChange={(value) => {
+                  setDobYear(value);
+                  const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
+                  setProfile({ ...profile, date_of_birth: newDob });
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Year" value="" />
+                {years.map((y) => (
+                  <Picker.Item key={y} label={y} value={y} />
+                ))}
+              </Picker>
+            </View>
+            <View style={[styles.pickerContainer, styles.dobPicker]}>
+              <Picker
+                selectedValue={dobMonth}
+                onValueChange={(value) => {
+                  setDobMonth(value);
+                  const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
+                  setProfile({ ...profile, date_of_birth: newDob });
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Mon" value="" />
+                {months.map((m) => (
+                  <Picker.Item key={m} label={m} value={m} />
+                ))}
+              </Picker>
+            </View>
+            <View style={[styles.pickerContainer, styles.dobPicker]}>
+              <Picker
+                selectedValue={dobDay}
+                onValueChange={(value) => {
+                  setDobDay(value);
+                  const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
+                  setProfile({ ...profile, date_of_birth: newDob });
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Day" value="" />
+                {daysInSelectedMonth.map((d) => (
+                  <Picker.Item key={d} label={d} value={d} />
+                ))}
+              </Picker>
+            </View>
           </View>
+        </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Gender</Text>
@@ -326,22 +400,32 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Save Profile Button */}
+        {/* Save Profile + Sign Out */}
         <View style={styles.section}>
-          <TouchableOpacity 
-            style={[styles.saveButton, saving && styles.buttonDisabled]}
-            onPress={saveProfile}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <>
-                <Ionicons name="save-outline" size={20} color="white" />
-                <Text style={styles.saveButtonText}>Update Profile</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <View style={styles.rowButtons}>
+            <TouchableOpacity 
+              style={[styles.saveButton, saving && styles.buttonDisabled]}
+              onPress={saveProfile}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Ionicons name="save-outline" size={20} color="white" />
+                  <Text style={styles.saveButtonText}>Update Profile</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.signOutButton}
+              onPress={signOut}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#6d28d9" />
+              <Text style={styles.signOutButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Addresses Section */}
@@ -433,12 +517,12 @@ export default function ProfileScreen() {
               <TouchableOpacity 
                 onPress={saveAddress} 
                 disabled={saving}
-                style={[saving && styles.disabledButton]}
+                style={[styles.modalSaveButton, saving && styles.disabledButton]}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color="#007AFF" />
+                  <ActivityIndicator size="small" color="#6d28d9" />
                 ) : (
-                  <Text style={styles.saveButton}>Save</Text>
+                  <Text style={styles.modalSaveButtonText}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -545,7 +629,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#faf8ff',
   },
   loadingContainer: {
     flex: 1,
@@ -573,7 +657,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#4c1d95',
   },
   section: {
     backgroundColor: 'white',
@@ -596,7 +680,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#4c1d95',
     marginLeft: 12,
     flex: 1,
   },
@@ -606,17 +690,24 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#333',
+    color: '#4c1d95',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e9d5ff',
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#f8f5ff',
+  },
+  dobRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dobPicker: {
+    flex: 1,
   },
   textArea: {
     height: 100,
@@ -624,9 +715,9 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e9d5ff',
     borderRadius: 8,
-    backgroundColor: '#fafafa',
+    backgroundColor: '#f8f5ff',
   },
   picker: {
     height: 50,
@@ -645,7 +736,7 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#4c1d95',
   },
   switchDescription: {
     fontSize: 14,
@@ -653,7 +744,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6d28d9',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -671,7 +762,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#6d28d9',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
@@ -684,6 +775,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
+  rowButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  signOutButton: {
+    backgroundColor: '#ede9fe',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+  },
+  signOutButtonText: {
+    color: '#6d28d9',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
   emptyAddresses: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -695,16 +805,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   addressCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#faf8ff',
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: '#6d28d9',
   },
   defaultAddress: {
     borderLeftColor: '#28A745',
-    backgroundColor: '#f8fff9',
+    backgroundColor: '#f5fff7',
   },
   addressHeader: {
     flexDirection: 'row',
@@ -755,12 +865,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e9d5ff',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#4c1d95',
   },
   cancelButton: {
     color: '#FF3B30',
@@ -770,6 +880,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
+  },
+  modalSaveButton: {
+    backgroundColor: '#6d28d9',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  modalSaveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   checkboxContainer: {
     flexDirection: 'row',
@@ -797,6 +920,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   bottomSpacing: {
-    height: 40,
+    height: 80,
   },
 });
