@@ -210,7 +210,7 @@ export default function HomeScreen() {
       setResidentProfile(normalizedProfile);
       setResidentRequests(normalizedRequests);
     } catch (e) {
-      console.log('Error loading resident data:', e);
+      console.error('Error loading resident data:', e);
       setResidentError('Failed to load dashboard');
     } finally {
       setResidentLoading(false);

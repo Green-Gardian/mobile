@@ -19,7 +19,7 @@ export default function MessagesScreen() {
       {/* Coming Soon Content */}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Ionicons name="chatbubbles-outline" size={80} color="#007AFF" />
+          <Ionicons name="chatbubbles-outline" size={80} color="#6d28d9" />
         </View>
         
         <Text style={styles.comingSoonTitle}>Customer Support Chat</Text>
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   comingSoonSubtitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#6d28d9',
     marginBottom: 30,
   },
   description: {
