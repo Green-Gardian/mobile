@@ -1,4 +1,3 @@
-// services/residentAPI.js
 import { getAccessToken } from '../services/api';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL;
@@ -47,10 +46,45 @@ export const ResidentAPI = {
     return apiCall('/profile');
   },
 
+  createUserProfile: async (profileData) => {
+    const payload = {
+      dateOfBirth: profileData.dateOfBirth,
+      gender: profileData.gender,
+      emergencyContactName: profileData.emergencyContactName || null,
+      emergencyContactPhone: profileData.emergencyContactPhone || null,
+      notificationPreferences: profileData.notificationPreferences || {
+        email: true,
+        sms: true,
+        push: true,
+      },
+      preferredCollectionTime: profileData.preferredCollectionTime || null,
+      specialInstructions: profileData.specialInstructions || null,
+    };
+
+    return apiCall('/profile', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   updateUserProfile: async (profileData) => {
+    const payload = {
+      dateOfBirth: profileData.dateOfBirth,
+      gender: profileData.gender,
+      emergencyContactName: profileData.emergencyContactName || null,
+      emergencyContactPhone: profileData.emergencyContactPhone || null,
+      notificationPreferences: profileData.notificationPreferences || {
+        email: true,
+        sms: true,
+        push: true,
+      },
+      preferredCollectionTime: profileData.preferredCollectionTime || null,
+      specialInstructions: profileData.specialInstructions || null,
+    };
+
     return apiCall('/profile', {
       method: 'PUT',
-      body: JSON.stringify(profileData),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -60,16 +94,36 @@ export const ResidentAPI = {
   },
 
   addUserAddress: async (addressData) => {
+    const payload = {
+      addressType: addressData.address_type,
+      streetAddress: addressData.street_address,
+      apartmentUnit: addressData.apartment_unit || null,
+      area: addressData.area || null,
+      city: addressData.city,
+      postalCode: addressData.postal_code || null,
+      landmark: addressData.landmark || null,
+    };
+
     return apiCall('/addresses', {
       method: 'POST',
-      body: JSON.stringify(addressData),
+      body: JSON.stringify(payload),
     });
   },
 
   updateUserAddress: async (addressId, addressData) => {
+    const payload = {
+      addressType: addressData.address_type,
+      streetAddress: addressData.street_address,
+      apartmentUnit: addressData.apartment_unit || null,
+      area: addressData.area || null,
+      city: addressData.city,
+      postalCode: addressData.postal_code || null,
+      landmark: addressData.landmark || null,
+    };
+
     return apiCall(`/addresses/${addressId}`, {
       method: 'PUT',
-      body: JSON.stringify(addressData),
+      body: JSON.stringify(payload),
     });
   },
 

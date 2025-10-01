@@ -25,9 +25,13 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [profileExists, setProfileExists] = useState(false);
   
-  // Profile state
   const [profile, setProfile] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
     date_of_birth: '',
     gender: 'male',
     emergency_contact_name: '',
@@ -41,7 +45,6 @@ export default function ProfileScreen() {
     },
   });
 
-  // Address state
   const [addresses, setAddresses] = useState([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
@@ -56,7 +59,6 @@ export default function ProfileScreen() {
     is_default: false,
   });
 
-  // DOB pickers state (fallback when no native date picker)
   const [dobYear, setDobYear] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobDay, setDobDay] = useState('');
@@ -88,28 +90,37 @@ export default function ProfileScreen() {
         ResidentAPI.getUserAddresses(),
       ]);
       
-      if (profileResponse.success && profileResponse.data) {
-        const nextProfile = {
-          ...profile,
-          ...profileResponse.data,
-          notification_preferences: profileResponse.data.notification_preferences || {
+      if (profileResponse.success && profileResponse.profile) {
+        setProfileExists(true);
+        const profileData = profileResponse.profile;
+        setProfile({
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          email: profileData.email || '',
+          phone_number: profileData.phone_number || '',
+          date_of_birth: profileData.date_of_birth || '',
+          gender: profileData.gender || 'male',
+          emergency_contact_name: profileData.emergency_contact_name || '',
+          emergency_contact_phone: profileData.emergency_contact_phone || '',
+          preferred_collection_time: profileData.preferred_collection_time || 'morning',
+          special_instructions: profileData.special_instructions || '',
+          notification_preferences: profileData.notification_preferences || {
             email: true,
             sms: true,
             push: true,
           },
-        };
-        setProfile(nextProfile);
-        // Initialize DOB pickers
-        const dob = String(nextProfile.date_of_birth || '');
-        if (dob && /^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+        });
+        
+        const dob = String(profileData.date_of_birth || '');
+        if (dob && /^\d{4}-\d{2}-\d{2}/.test(dob)) {
           setDobYear(dob.slice(0, 4));
           setDobMonth(dob.slice(5, 7));
           setDobDay(dob.slice(8, 10));
         }
       }
       
-      if (addressResponse.success && addressResponse.data) {
-        setAddresses(addressResponse.data);
+      if (addressResponse.success && addressResponse.addresses) {
+        setAddresses(addressResponse.addresses);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -122,16 +133,33 @@ export default function ProfileScreen() {
   const saveProfile = async () => {
     try {
       setSaving(true);
-      const response = await ResidentAPI.updateUserProfile(profile);
+      
+      const payload = {
+        dateOfBirth: profile.date_of_birth,
+        gender: profile.gender,
+        emergencyContactName: profile.emergency_contact_name || null,
+        emergencyContactPhone: profile.emergency_contact_phone || null,
+        notificationPreferences: profile.notification_preferences,
+        preferredCollectionTime: profile.preferred_collection_time || null,
+        specialInstructions: profile.special_instructions || null,
+      };
+
+      let response;
+      if (profileExists) {
+        response = await ResidentAPI.updateUserProfile(payload);
+      } else {
+        response = await ResidentAPI.createUserProfile(payload);
+        if (response.success) setProfileExists(true);
+      }
       
       if (response.success) {
-        Alert.alert('Success', 'Profile updated successfully!');
+        Alert.alert('Success', response.message || 'Profile updated successfully!');
       } else {
         Alert.alert('Error', response.message || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', error.message || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
@@ -140,7 +168,16 @@ export default function ProfileScreen() {
   const openAddressModal = (address = null) => {
     if (address) {
       setEditingAddress(address);
-      setAddressForm(address);
+      setAddressForm({
+        address_type: address.address_type,
+        street_address: address.street_address,
+        apartment_unit: address.apartment_unit || '',
+        area: address.area || '',
+        city: address.city,
+        postal_code: address.postal_code || '',
+        landmark: address.landmark || '',
+        is_default: address.is_default || false,
+      });
     } else {
       setEditingAddress(null);
       setAddressForm({
@@ -174,7 +211,7 @@ export default function ProfileScreen() {
       }
       
       if (response.success) {
-        Alert.alert('Success', `Address ${editingAddress ? 'updated' : 'added'} successfully!`);
+        Alert.alert('Success', response.message || `Address ${editingAddress ? 'updated' : 'added'} successfully!`);
         setShowAddressModal(false);
         setEditingAddress(null);
         await loadProfileData();
@@ -183,10 +220,38 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error saving address:', error);
-      Alert.alert('Error', `Failed to ${editingAddress ? 'update' : 'add'} address`);
+      Alert.alert('Error', error.message || `Failed to ${editingAddress ? 'update' : 'add'} address`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const deleteAddress = async (addressId) => {
+    Alert.alert(
+      'Delete Address',
+      'Are you sure you want to delete this address?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await ResidentAPI.deleteUserAddress(addressId);
+              if (response.success) {
+                Alert.alert('Success', response.message || 'Address deleted successfully');
+                setShowAddressModal(false);
+                await loadProfileData();
+              } else {
+                Alert.alert('Error', response.message || 'Failed to delete address');
+              }
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to delete address');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const updateNotificationPreference = (key, value) => {
@@ -203,7 +268,7 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#8B5CF6" />
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </SafeAreaView>
@@ -213,71 +278,89 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
         </View>
         
-        {/* Personal Information Section */}
+        {/* Combined Profile Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={24} color="#007AFF" />
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <Ionicons name="person-outline" size={24} color="#8B5CF6" />
+            <Text style={styles.sectionTitle}>Profile Information</Text>
           </View>
-          
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Date of Birth</Text>
-          <View style={styles.dobRow}>
-            <View style={[styles.pickerContainer, styles.dobPicker]}>
-              <Picker
-                selectedValue={dobYear}
-                onValueChange={(value) => {
-                  setDobYear(value);
-                  const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
-                  setProfile({ ...profile, date_of_birth: newDob });
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Year" value="" />
-                {years.map((y) => (
-                  <Picker.Item key={y} label={y} value={y} />
-                ))}
-              </Picker>
-            </View>
-            <View style={[styles.pickerContainer, styles.dobPicker]}>
-              <Picker
-                selectedValue={dobMonth}
-                onValueChange={(value) => {
-                  setDobMonth(value);
-                  const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
-                  setProfile({ ...profile, date_of_birth: newDob });
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Mon" value="" />
-                {months.map((m) => (
-                  <Picker.Item key={m} label={m} value={m} />
-                ))}
-              </Picker>
-            </View>
-            <View style={[styles.pickerContainer, styles.dobPicker]}>
-              <Picker
-                selectedValue={dobDay}
-                onValueChange={(value) => {
-                  setDobDay(value);
-                  const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
-                  setProfile({ ...profile, date_of_birth: newDob });
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Day" value="" />
-                {daysInSelectedMonth.map((d) => (
-                  <Picker.Item key={d} label={d} value={d} />
-                ))}
-              </Picker>
+
+          {/* Read-only user info */}
+          <View style={styles.infoCard}>
+            <Text style={styles.infoLabel}>Name</Text>
+            <Text style={styles.infoValue}>{profile.first_name} {profile.last_name}</Text>
+          </View>
+
+          <View style={styles.infoCard}>
+            <Text style={styles.infoLabel}>Email</Text>
+            <Text style={styles.infoValue}>{profile.email}</Text>
+          </View>
+
+          <View style={styles.infoCard}>
+            <Text style={styles.infoLabel}>Phone</Text>
+            <Text style={styles.infoValue}>{profile.phone_number}</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Editable fields */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Date of Birth</Text>
+            <View style={styles.dobRow}>
+              <View style={[styles.pickerContainer, styles.dobPicker]}>
+                <Picker
+                  selectedValue={dobYear}
+                  onValueChange={(value) => {
+                    setDobYear(value);
+                    const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
+                    setProfile({ ...profile, date_of_birth: newDob });
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Year" value="" />
+                  {years.map((y) => (
+                    <Picker.Item key={y} label={y} value={y} />
+                  ))}
+                </Picker>
+              </View>
+              <View style={[styles.pickerContainer, styles.dobPicker]}>
+                <Picker
+                  selectedValue={dobMonth}
+                  onValueChange={(value) => {
+                    setDobMonth(value);
+                    const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
+                    setProfile({ ...profile, date_of_birth: newDob });
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Mon" value="" />
+                  {months.map((m) => (
+                    <Picker.Item key={m} label={m} value={m} />
+                  ))}
+                </Picker>
+              </View>
+              <View style={[styles.pickerContainer, styles.dobPicker]}>
+                <Picker
+                  selectedValue={dobDay}
+                  onValueChange={(value) => {
+                    setDobDay(value);
+                    const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
+                    setProfile({ ...profile, date_of_birth: newDob });
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Day" value="" />
+                  {daysInSelectedMonth.map((d) => (
+                    <Picker.Item key={d} label={d} value={d} />
+                  ))}
+                </Picker>
+              </View>
             </View>
           </View>
-        </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Gender</Text>
@@ -314,14 +397,8 @@ export default function ProfileScreen() {
               keyboardType="phone-pad"
             />
           </View>
-        </View>
 
-        {/* Service Preferences Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="settings-outline" size={24} color="#007AFF" />
-            <Text style={styles.sectionTitle}>Service Preferences</Text>
-          </View>
+          <View style={styles.divider} />
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Preferred Collection Time</Text>
@@ -344,65 +421,15 @@ export default function ProfileScreen() {
               style={[styles.input, styles.textArea]}
               value={profile.special_instructions}
               onChangeText={(text) => setProfile({...profile, special_instructions: text})}
-              placeholder="Any special instructions for service providers..."
+              placeholder="Any special instructions..."
               multiline
               numberOfLines={4}
               textAlignVertical="top"
             />
           </View>
-        </View>
 
-        {/* Notification Preferences Section */}
-        {/* <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="notifications-outline" size={24} color="#007AFF" />
-            <Text style={styles.sectionTitle}>Notification Preferences</Text>
-          </View>
+          <View style={styles.divider} />
 
-          <View style={styles.switchContainer}>
-            <View style={styles.switchRow}>
-              <View>
-                <Text style={styles.switchLabel}>Email Notifications</Text>
-                <Text style={styles.switchDescription}>Receive updates via email</Text>
-              </View>
-              <Switch
-                value={profile.notification_preferences.email}
-                onValueChange={(value) => updateNotificationPreference('email', value)}
-                trackColor={{ false: '#767577', true: '#007AFF' }}
-                thumbColor={profile.notification_preferences.email ? '#fff' : '#f4f3f4'}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <View>
-                <Text style={styles.switchLabel}>SMS Notifications</Text>
-                <Text style={styles.switchDescription}>Receive updates via text message</Text>
-              </View>
-              <Switch
-                value={profile.notification_preferences.sms}
-                onValueChange={(value) => updateNotificationPreference('sms', value)}
-                trackColor={{ false: '#767577', true: '#007AFF' }}
-                thumbColor={profile.notification_preferences.sms ? '#fff' : '#f4f3f4'}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <View>
-                <Text style={styles.switchLabel}>Push Notifications</Text>
-                <Text style={styles.switchDescription}>Receive app notifications</Text>
-              </View>
-              <Switch
-                value={profile.notification_preferences.push}
-                onValueChange={(value) => updateNotificationPreference('push', value)}
-                trackColor={{ false: '#767577', true: '#007AFF' }}
-                thumbColor={profile.notification_preferences.push ? '#fff' : '#f4f3f4'}
-              />
-            </View>
-          </View>
-        </View> */}
-
-        {/* Save Profile + Sign Out */}
-        <View style={styles.section}>
           <View style={styles.rowButtons}>
             <TouchableOpacity 
               style={[styles.saveButton, saving && styles.buttonDisabled]}
@@ -413,7 +440,7 @@ export default function ProfileScreen() {
                 <ActivityIndicator size="small" color="white" />
               ) : (
                 <>
-                  <Ionicons style={styles.iconUpdate} name="save-outline" size={20} color="white" />
+                  <Ionicons name="save-outline" size={20} color="white" />
                   <Text style={styles.saveButtonText}>Update Profile</Text>
                 </>
               )}
@@ -425,7 +452,6 @@ export default function ProfileScreen() {
                 try {
                   const result = await signOut();
                   if (result.success) {
-                    // Force navigation to auth screen after successful logout
                     router.replace('/(auth)/signin');
                   }
                 } catch (error) {
@@ -433,7 +459,7 @@ export default function ProfileScreen() {
                 }
               }}
             >
-              <Ionicons name="log-out-outline" size={20} color="#6d28d9" />
+              <Ionicons name="log-out-outline" size={20} color="#8B5CF6" />
               <Text style={styles.signOutButtonText}>Sign Out</Text>
             </TouchableOpacity>
           </View>
@@ -442,7 +468,7 @@ export default function ProfileScreen() {
         {/* Addresses Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="location-outline" size={24} color="#007AFF" />
+            <Ionicons name="location-outline" size={24} color="#8B5CF6" />
             <Text style={styles.sectionTitle}>My Addresses</Text>
             <TouchableOpacity
               style={styles.addButton}
@@ -468,7 +494,7 @@ export default function ProfileScreen() {
             addresses.map((address) => (
               <TouchableOpacity
                 key={address.id}
-                style={[styles.addressCard, address.is_default && styles.defaultAddress]}
+                style={styles.addressCard}
                 onPress={() => openAddressModal(address)}
               >
                 <View style={styles.addressHeader}>
@@ -476,13 +502,13 @@ export default function ProfileScreen() {
                     <Ionicons 
                       name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'business' : 'location'} 
                       size={20} 
-                      color="#007AFF" 
+                      color="#8B5CF6" 
                     />
                     <Text style={styles.addressType}>{address.address_type.toUpperCase()}</Text>
                   </View>
-                  {address.is_default && (
-                    <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultBadgeText}>DEFAULT</Text>
+                  {address.is_active && (
+                    <View style={styles.activeBadge}>
+                      <Text style={styles.activeBadgeText}>ACTIVE</Text>
                     </View>
                   )}
                 </View>
@@ -492,12 +518,6 @@ export default function ProfileScreen() {
                   <Text style={styles.addressText}>Unit: {address.apartment_unit}</Text>
                 )}
                 <Text style={styles.addressText}>{address.area && `${address.area}, `}{address.city}</Text>
-                {address.postal_code && (
-                  <Text style={styles.addressText}>Postal: {address.postal_code}</Text>
-                )}
-                {address.landmark && (
-                  <Text style={styles.landmarkText}>📍 {address.landmark}</Text>
-                )}
               </TouchableOpacity>
             ))
           )}
@@ -528,10 +548,9 @@ export default function ProfileScreen() {
               <TouchableOpacity 
                 onPress={saveAddress} 
                 disabled={saving}
-                style={[styles.modalSaveButton, saving && styles.disabledButton]}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color="#6d28d9" />
+                  <ActivityIndicator size="small" color="#8B5CF6" />
                 ) : (
                   <Text style={styles.modalSaveButtonText}>Save</Text>
                 )}
@@ -560,8 +579,7 @@ export default function ProfileScreen() {
                   style={styles.input}
                   value={addressForm.street_address}
                   onChangeText={(text) => setAddressForm({...addressForm, street_address: text})}
-                  placeholder="Enter your street address"
-                  required
+                  placeholder="Enter street address"
                 />
               </View>
 
@@ -571,7 +589,7 @@ export default function ProfileScreen() {
                   style={styles.input}
                   value={addressForm.apartment_unit}
                   onChangeText={(text) => setAddressForm({...addressForm, apartment_unit: text})}
-                  placeholder="Apartment, suite, unit, etc."
+                  placeholder="Apartment, suite, unit"
                 />
               </View>
 
@@ -592,7 +610,6 @@ export default function ProfileScreen() {
                   value={addressForm.city}
                   onChangeText={(text) => setAddressForm({...addressForm, city: text})}
                   placeholder="City"
-                  required
                 />
               </View>
 
@@ -612,21 +629,19 @@ export default function ProfileScreen() {
                   style={styles.input}
                   value={addressForm.landmark}
                   onChangeText={(text) => setAddressForm({...addressForm, landmark: text})}
-                  placeholder="Nearby landmark (optional)"
+                  placeholder="Nearby landmark"
                 />
               </View>
 
-              <TouchableOpacity
-                style={styles.checkboxContainer}
-                onPress={() => setAddressForm({...addressForm, is_default: !addressForm.is_default})}
-              >
-                <View style={[styles.checkbox, addressForm.is_default && styles.checkboxChecked]}>
-                  {addressForm.is_default && (
-                    <Ionicons name="checkmark" size={16} color="white" />
-                  )}
-                </View>
-                <Text style={styles.checkboxLabel}>Set as default address</Text>
-              </TouchableOpacity>
+              {editingAddress && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => deleteAddress(editingAddress.id)}
+                >
+                  <Ionicons name="trash-outline" size={20} color="white" />
+                  <Text style={styles.deleteButtonText}>Delete Address</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.bottomSpacing} />
             </ScrollView>
@@ -638,304 +653,51 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#faf8ff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  header: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4c1d95',
-  },
-  section: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4c1d95',
-    marginLeft: 12,
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#4c1d95',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e9d5ff',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#f8f5ff',
-  },
-  dobRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dobPicker: {
-    flex: 1,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#e9d5ff',
-    borderRadius: 8,
-    backgroundColor: '#f8f5ff',
-  },
-  picker: {
-    height: 50,
-  },
-  switchContainer: {
-    marginTop: 8,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  switchLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#4c1d95',
-  },
-  switchDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  saveButton: {
-    backgroundColor: '#6d28d9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  iconUpdate:{
-    paddingLeft: 5,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-    paddingLeft: 5,
-    paddingRight: 5,
-  },
-  addButton: {
-    backgroundColor: '#6d28d9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  addButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  rowButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  signOutButton: {
-    backgroundColor: '#ede9fe',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical:10,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-  },
-  signOutButtonText: {
-    color: '#6d28d9',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  emptyAddresses: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  addressCard: {
-    backgroundColor: '#faf8ff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6d28d9',
-  },
-  defaultAddress: {
-    borderLeftColor: '#28A745',
-    backgroundColor: '#f5fff7',
-  },
-  addressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  addressTypeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  addressType: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    marginLeft: 6,
-  },
-  defaultBadge: {
-    backgroundColor: '#28A745',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  defaultBadgeText: {
-    fontSize: 10,
-    color: 'white',
-    fontWeight: '600',
-  },
-  addressText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 2,
-  },
-  landmarkText: {
-    fontSize: 13,
-    color: '#666',
-    fontStyle: 'italic',
-    marginTop: 4,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9d5ff',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4c1d95',
-  },
-  cancelButton: {
-    color: '#FF3B30',
-    fontSize: 16,
-  },
-  modalContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  modalSaveButton: {
-    backgroundColor: '#6d28d9',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    minWidth: 90,
-    alignItems: 'center',
-  },
-  modalSaveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderRadius: 4,
-    marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#007AFF',
-  },
-  checkboxLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  bottomSpacing: {
-    height: 80,
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 16, fontSize: 16, color: '#666' },
+  scrollContainer: { flex: 1 },
+  header: { backgroundColor: 'white', paddingHorizontal: 20, paddingVertical: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
+  section: { backgroundColor: 'white', marginHorizontal: 16, marginTop: 16, paddingHorizontal: 20, paddingVertical: 16, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginLeft: 12, flex: 1 },
+  infoCard: { backgroundColor: '#f9f9f9', padding: 12, borderRadius: 8, marginBottom: 12 },
+  infoLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
+  infoValue: { fontSize: 16, color: '#333', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 16 },
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, backgroundColor: 'white' },
+  dobRow: { flexDirection: 'row', gap: 8 },
+  dobPicker: { flex: 1 },
+  textArea: { height: 100, textAlignVertical: 'top' },
+  pickerContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, backgroundColor: 'white' },
+  picker: { height: 50 },
+  saveButton: { backgroundColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 8, flex: 1 },
+  buttonDisabled: { backgroundColor: '#ccc' },
+  saveButtonText: { color: 'white', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  addButton: { backgroundColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
+  addButtonText: { color: 'white', fontSize: 14, fontWeight: '600', marginLeft: 4 },
+  rowButtons: { flexDirection: 'row', gap: 12 },
+  signOutButton: { backgroundColor: '#f3f4f6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 8, paddingHorizontal: 16 },
+  signOutButtonText: { color: '#8B5CF6', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  emptyAddresses: { alignItems: 'center', paddingVertical: 40 },
+  emptyText: { fontSize: 16, color: '#666', marginTop: 12, marginBottom: 20 },
+  addressCard: { backgroundColor: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: '#8B5CF6' },
+  addressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  addressTypeContainer: { flexDirection: 'row', alignItems: 'center' },
+  addressType: { fontSize: 12, fontWeight: '600', color: '#666', marginLeft: 6 },
+  activeBadge: { backgroundColor: '#28A745', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  activeBadgeText: { fontSize: 10, color: 'white', fontWeight: '600' },
+  addressText: { fontSize: 14, color: '#333', marginBottom: 2 },
+  modalContainer: { flex: 1, backgroundColor: 'white' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  cancelButton: { color: '#666', fontSize: 16 },
+  modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 16 },
+  modalSaveButtonText: { color: '#8B5CF6', fontSize: 16, fontWeight: '600' },
+  deleteButton: { backgroundColor: '#FF3B30', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 8, marginTop: 16 },
+  deleteButtonText: { color: 'white', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  bottomSpacing: { height: 80 },
 });
