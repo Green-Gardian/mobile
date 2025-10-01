@@ -266,9 +266,9 @@ export default function HomeScreen() {
                   <Text style={styles.driverId}>ID: {driverData.id}</Text>
                 </View>
               </View>
-              <View style={styles.statusBadge}>
+              {/* <View style={styles.statusBadge}>
                 <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
-              </View>
+              </View> */}
             </View>
           </LinearGradient>
         </View>
@@ -377,9 +377,9 @@ export default function HomeScreen() {
                 {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
               </View>
             </View>
-            <View style={styles.statusBadge}>
+            {/* <View style={styles.statusBadge}>
               <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
-            </View>
+            </View> */}
           </View>
         </LinearGradient>
       </View>
