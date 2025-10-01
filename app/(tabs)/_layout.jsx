@@ -5,9 +5,15 @@ import { Platform } from 'react-native';
 import { HapticTab } from '../../components/haptic-tab';
 import { IconSymbol } from '../../components/ui/icon-symbol';
 import { useColorScheme } from '../../hooks/use-color-scheme';
+import { useAuth } from '../../context/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { state } = useAuth();
+  
+  // Hide main tab bar for drivers - they use internal driver tabs
+  const isDriver = state.user?.role === 'driver';
+  const shouldShowTabBar = !isDriver;
 
   return (
     <Tabs
@@ -19,6 +25,7 @@ export default function TabLayout() {
         tabBarStyle: Platform.select({
           ios: {
             position: 'absolute',
+            display: shouldShowTabBar ? 'flex' : 'none',
           },
           default: {
             backgroundColor: 'white',
@@ -27,6 +34,7 @@ export default function TabLayout() {
             height: 64,
             paddingBottom: 10,
             paddingTop: 8,
+            display: shouldShowTabBar ? 'flex' : 'none',
           },
         }),
         tabBarLabelStyle: {

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
@@ -249,29 +250,39 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Welcome Card */}
-        <View style={styles.welcomeCard}>
-          <LinearGradient
-            colors={['#6d28d9', '#8b5cf6']}
-            style={styles.welcomeGradient}
-          >
-            <View style={styles.welcomeContent}>
-              <View style={styles.profileSection}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
-                </View>
-                <View style={styles.profileInfo}>
-                  <Text style={styles.welcomeText}>Welcome back!</Text>
-                  <Text style={styles.driverName}>{driverData.name}</Text>
-                  <Text style={styles.driverId}>ID: {driverData.id}</Text>
-                </View>
-              </View>
-              {/* <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
-              </View> */}
-            </View>
-          </LinearGradient>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Driver Dashboard</Text>
+          <TouchableOpacity style={styles.notificationBtn}>
+            <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
+          </TouchableOpacity>
         </View>
+
+         {/* Welcome Card */}
+         <View style={styles.welcomeCard}>
+           <LinearGradient
+             colors={['#6d28d9', '#8b5cf6']}
+             style={styles.welcomeGradient}
+           >
+             {/* Status Badge - Top Right Corner */}
+             <View style={styles.statusBadgeCorner}>
+               <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
+             </View>
+             
+             <View style={styles.welcomeContent}>
+               <View style={styles.profileSection}>
+                 <View style={styles.avatar}>
+                   <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
+                 </View>
+                 <View style={styles.profileInfo}>
+                   <Text style={styles.welcomeText}>Welcome back!</Text>
+                   <Text style={styles.driverName}>{driverData.name}</Text>
+                   <Text style={styles.driverId}>ID: {driverData.id}</Text>
+                 </View>
+               </View>
+             </View>
+           </LinearGradient>
+         </View>
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
@@ -297,14 +308,14 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Current Tasks</Text>
-            <View style={styles.sectionHeaderRight}>
-              <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-                <Text style={styles.refreshText}>🔄</Text>
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
+             <View style={styles.sectionHeaderRight}>
+               <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+                 <Ionicons name="refresh-outline" size={20} color="#6d28d9" />
+               </TouchableOpacity>
+               <TouchableOpacity>
+                 <Text style={styles.seeAllText}>See All</Text>
+               </TouchableOpacity>
+             </View>
           </View>
           {currentTasks.map((task) => (
             <View key={task.id} style={styles.taskCard}>
@@ -346,7 +357,10 @@ export default function HomeScreen() {
   };
 
   const renderResidentOverview = () => (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.residentScrollContent}
+    >
       {residentLoading ? (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading dashboard...</Text>
@@ -360,29 +374,39 @@ export default function HomeScreen() {
         </View>
       ) : (
         <>
-      {/* Welcome Card */}
-      <View style={styles.welcomeCard}>
-        <LinearGradient
-          colors={['#10b981', '#34d399']}
-          style={styles.welcomeGradient}
-        >
-          <View style={styles.welcomeContent}>
-            <View style={styles.profileSection}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{(residentProfile?.full_name || state.user?.username || 'R').split(' ').map(n => n[0]).join('')}</Text>
-              </View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.welcomeText}>Welcome back!</Text>
-                <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
-                {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
-              </View>
-            </View>
-            {/* <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
-            </View> */}
-          </View>
-        </LinearGradient>
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Resident Dashboard</Text>
+          <TouchableOpacity style={styles.notificationBtn}>
+            <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
+          </TouchableOpacity>
+        </View>
+
+         {/* Welcome Card */}
+         <View style={styles.welcomeCard}>
+           <LinearGradient
+             colors={['#10b981', '#34d399']}
+             style={styles.welcomeGradient}
+           >
+             {/* Status Badge - Top Right Corner */}
+             <View style={styles.statusBadgeCorner}>
+               <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
+             </View>
+             
+             <View style={styles.welcomeContent}>
+               <View style={styles.profileSection}>
+                 <View style={styles.avatar}>
+                   <Text style={styles.avatarText}>{(residentProfile?.full_name || state.user?.username || 'R').split(' ').map(n => n[0]).join('')}</Text>
+                 </View>
+                 <View style={styles.profileInfo}>
+                   <Text style={styles.welcomeText}>Welcome back!</Text>
+                   <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
+                   {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
+                 </View>
+               </View>
+             </View>
+           </LinearGradient>
+         </View>
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
@@ -398,10 +422,10 @@ export default function HomeScreen() {
           <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'completed').length}</Text>
           <Text style={styles.statLabel}>Completed</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>📅</Text>
-          <Text style={styles.statLabel}>Next Collection</Text>
-        </View>
+         <View style={styles.statCard}>
+           <Ionicons name="calendar-outline" size={24} color="#6d28d9" />
+           <Text style={styles.statLabel}>Next Collection</Text>
+         </View>
       </View>
 
       {/* Next Collection Info */}
@@ -428,20 +452,20 @@ export default function HomeScreen() {
       {/* Quick Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>📞</Text>
-            <Text style={styles.quickActionText}>Request Service</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>📍</Text>
-            <Text style={styles.quickActionText}>Update Address</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>💬</Text>
-            <Text style={styles.quickActionText}>Contact Support</Text>
-          </TouchableOpacity>
-        </View>
+         <View style={styles.quickActionsContainer}>
+           <TouchableOpacity style={styles.quickActionButton}>
+             <Ionicons name="call-outline" size={24} color="#6d28d9" />
+             <Text style={styles.quickActionText}>Request Service</Text>
+           </TouchableOpacity>
+           <TouchableOpacity style={styles.quickActionButton}>
+             <Ionicons name="location-outline" size={24} color="#6d28d9" />
+             <Text style={styles.quickActionText}>Update Address</Text>
+           </TouchableOpacity>
+           <TouchableOpacity style={styles.quickActionButton}>
+             <Ionicons name="chatbubble-outline" size={24} color="#6d28d9" />
+             <Text style={styles.quickActionText}>Contact Support</Text>
+           </TouchableOpacity>
+         </View>
       </View>
         </>
       )}
@@ -485,25 +509,20 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-       {/* Header */}
-       <View style={styles.header}>
-         <Text style={styles.headerTitle}>
-           {isDriver ? 'Driver Dashboard' : 'Resident Dashboard'}
-         </Text>
-         <TouchableOpacity style={styles.notificationBtn}>
-           <Text style={styles.notificationIcon}>🔔</Text>
-         </TouchableOpacity>
-       </View>
+      {/* Content */}
+      <View style={styles.content}>
+        {renderContent()}
+      </View>
 
       {/* Tab Navigation - Only for Drivers */}
       {isDriver && (
         <View style={styles.bottomTabContainer}>
           {[
-            { key: 'overview', label: 'Overview', icon: '📊' },
-            { key: 'tasks', label: 'Tasks', icon: '📋' },
-            { key: 'workareas', label: 'Areas', icon: '🗺️' },
-            { key: 'performance', label: 'Performance', icon: '📈' },
-            { key: 'profile', label: 'Profile', icon: '👤' }
+            { key: 'overview', label: 'Overview', icon: 'analytics-outline' },
+            { key: 'tasks', label: 'Tasks', icon: 'list-outline' },
+            { key: 'workareas', label: 'Areas', icon: 'map-outline' },
+            { key: 'performance', label: 'Performance', icon: 'trending-up-outline' },
+            { key: 'profile', label: 'Profile', icon: 'person-outline' }
           ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
@@ -511,7 +530,11 @@ export default function HomeScreen() {
               onPress={() => setActiveTab(tab.key)}
             >
               <View style={[styles.tabIconContainer, activeTab === tab.key && styles.activeTabIconContainer]}>
-                <Text style={[styles.tabIcon, activeTab === tab.key && styles.activeTabIcon]}>{tab.icon}</Text>
+                <Ionicons 
+                  name={tab.icon} 
+                  size={20} 
+                  color={activeTab === tab.key ? '#6d28d9' : '#a78bfa'} 
+                />
               </View>
               <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
                 {tab.label}
@@ -520,11 +543,6 @@ export default function HomeScreen() {
           ))}
         </View>
       )}
-
-      {/* Content */}
-      <View style={styles.content}>
-        {renderContent()}
-      </View>
     </View>
   );
 }
@@ -539,7 +557,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     paddingBottom: 20,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
@@ -558,9 +576,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-   notificationIcon: {
-     fontSize: 18,
-   },
   bottomTabContainer: {
     position: 'absolute',
     bottom: 0,
@@ -591,13 +606,6 @@ const styles = StyleSheet.create({
   activeTabIconContainer: {
     backgroundColor: '#ede9fe',
   },
-  tabIcon: {
-    fontSize: 18,
-    color: '#a78bfa',
-  },
-  activeTabIcon: {
-    color: '#6d28d9',
-  },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
@@ -610,12 +618,15 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 120,
+    paddingBottom: 120, // Keep padding for driver internal tabs
+  },
+  residentScrollContent: {
+    paddingBottom: 80, // Padding for main tab bar
   },
   welcomeCard: {
     borderRadius: 16,
+    marginHorizontal: 20,
+    marginTop: 20,
     marginBottom: 20,
     overflow: 'hidden',
     elevation: 4,
@@ -623,13 +634,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    position: 'relative',
   },
   welcomeGradient: {
     padding: 20,
   },
   welcomeContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingRight: 8, // Add padding to prevent overflow
   },
@@ -669,6 +680,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
   },
+  statusBadgeCorner: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
   statusBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 8,
@@ -684,16 +706,18 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginHorizontal: 20,
     marginBottom: 20,
   },
   statCard: {
-    flex: 1,
+    width: '48%',
     backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 4,
+    marginBottom: 12,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -712,6 +736,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   section: {
+    marginHorizontal: 20,
     marginBottom: 20,
   },
   sectionHeader: {
@@ -727,9 +752,6 @@ const styles = StyleSheet.create({
   },
   refreshBtn: {
     padding: 4,
-  },
-  refreshText: {
-    fontSize: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -858,10 +880,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-  },
-  quickActionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
   },
   quickActionText: {
     fontSize: 12,
