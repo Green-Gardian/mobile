@@ -11,11 +11,10 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -354,7 +353,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Notification Preferences Section */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="notifications-outline" size={24} color="#007AFF" />
             <Text style={styles.sectionTitle}>Notification Preferences</Text>
@@ -400,7 +399,7 @@ export default function ProfileScreen() {
               />
             </View>
           </View>
-        </View>
+        </View> */}
 
         {/* Save Profile + Sign Out */}
         <View style={styles.section}>
@@ -414,7 +413,7 @@ export default function ProfileScreen() {
                 <ActivityIndicator size="small" color="white" />
               ) : (
                 <>
-                  <Ionicons name="save-outline" size={20} color="white" />
+                  <Ionicons style={styles.iconUpdate} name="save-outline" size={20} color="white" />
                   <Text style={styles.saveButtonText}>Update Profile</Text>
                 </>
               )}
@@ -767,11 +766,16 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: '#ccc',
   },
+  iconUpdate:{
+    paddingLeft: 5,
+  },
   saveButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+    paddingLeft: 5,
+    paddingRight: 5,
   },
   addButton: {
     backgroundColor: '#6d28d9',
@@ -796,9 +800,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 8,
-    paddingHorizontal: 14,
+    paddingVertical:10,
+    borderRadius: 5,
+    paddingHorizontal: 10,
   },
   signOutButtonText: {
     color: '#6d28d9',

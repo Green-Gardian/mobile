@@ -204,9 +204,11 @@ export default function HomeScreen() {
         ResidentAPI.getUserServiceRequests(),
       ]);
 
-      setResidentProfile(profileResp?.data || profileResp || null);
-      const requests = requestsResp?.data || requestsResp || [];
-      setResidentRequests(Array.isArray(requests) ? requests : (requests.items || []));
+      const normalizedProfile = Array.isArray(profileResp) ? profileResp[0] : (profileResp?.data || profileResp || null);
+      const normalizedRequests = Array.isArray(requestsResp) ? requestsResp : (requestsResp?.data || []);
+
+      setResidentProfile(normalizedProfile);
+      setResidentRequests(normalizedRequests);
     } catch (e) {
       console.log('Error loading resident data:', e);
       setResidentError('Failed to load dashboard');
@@ -412,7 +414,10 @@ export default function HomeScreen() {
               <Text style={styles.priorityText}>CONFIRMED</Text>
             </View>
           </View>
-          <Text style={styles.taskLocation}>{ServiceRequestUtils.formatDateTime(residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.preferredDate) || 'N/A'}</Text>
+          <Text style={styles.taskLocation}>{ServiceRequestUtils.formatDateTime(
+            (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.scheduled_date) ||
+            (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.preferred_date)
+          ) || 'N/A'}</Text>
           <View style={styles.taskFooter}>
             <Text style={styles.fillLevelText}>Status: Scheduled</Text>
             <Text style={styles.estimatedTime}>Regular pickup</Text>

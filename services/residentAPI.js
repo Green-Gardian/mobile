@@ -13,6 +13,11 @@ const apiCall = async (endpoint, options = {}) => {
       throw new Error('No access token available');
     }
 
+    console.log(`[API] Calling: ${BASE_URL}${endpoint}`);
+    if (options.body) {
+      console.log('[API] Request body:', options.body);
+    }
+    
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -23,6 +28,7 @@ const apiCall = async (endpoint, options = {}) => {
     });
 
     const data = await response.json();
+    console.log(`[API] Response from ${endpoint}:`, data);
 
     if (!response.ok) {
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
@@ -30,7 +36,7 @@ const apiCall = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
-    console.error(`API call error for ${endpoint}:`, error);
+    console.error(`[API] Error for ${endpoint}:`, error);
     throw error;
   }
 };
@@ -88,9 +94,22 @@ export const ResidentAPI = {
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
+    // Backend expects snake_case based on the response format
+    const payload = {
+      service_type_id: requestData.serviceTypeId,
+      address_id: requestData.addressId,
+      title: requestData.title,
+      description: requestData.description || null,
+      preferred_date: requestData.preferredDate,
+      preferred_time_slot: requestData.preferredTimeSlot || 'morning',
+      special_instructions: requestData.specialInstructions || null,
+      estimated_weight: requestData.estimatedWeight || null,
+      estimated_bags: requestData.estimatedBags || null,
+    };
+
     return apiCall('/service-requests', {
       method: 'POST',
-      body: JSON.stringify(requestData),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -110,14 +129,33 @@ export const ResidentAPI = {
 
   // ===== FEEDBACK =====
   submitFeedback: async (requestId, feedbackData) => {
+    // Payload: { rating: number (1-5), comment: string }
+    const payload = {
+      rating: feedbackData.rating,
+      comment: feedbackData.comment,
+    };
+
     return apiCall(`/service-requests/${requestId}/feedback`, {
       method: 'POST',
-      body: JSON.stringify(feedbackData),
+      body: JSON.stringify(payload),
     });
   },
 
   getFeedback: async (requestId) => {
-    return apiCall(`/service-requests/${requestId}/feedback`);
+    try {
+      const response = await apiCall(`/service-requests/${requestId}/feedback`);
+      // If success is false and message is "Feedback not found", return null gracefully
+      if (!response.success && response.message === 'Feedback not found') {
+        return { success: false, feedback: null };
+      }
+      return response;
+    } catch (error) {
+      // Handle 404 or feedback not found errors gracefully
+      if (error.message && error.message.includes('Feedback not found')) {
+        return { success: false, feedback: null };
+      }
+      throw error;
+    }
   },
 
   // ===== MESSAGES =====
@@ -135,65 +173,93 @@ export const ResidentAPI = {
 
 // Utility functions for formatting and validation
 export const ServiceRequestUtils = {
-  // Format date for display
+  // Format date for display (e.g., "Oct 1, 2025")
   formatDate: (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
   },
 
-  // Format date and time for display
+  // Format date and time for display (e.g., "Oct 1, 2025, 02:30 PM")
   formatDateTime: (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting datetime:', error);
+      return 'N/A';
+    }
   },
 
-  // Get status color
+  // Get status color based on status
   getStatusColor: (status) => {
     const statusColors = {
-      pending: '#FFA500',
-      approved: '#007AFF',
-      assigned: '#17A2B8',
-      in_progress: '#6F42C1',
-      completed: '#28A745',
-      cancelled: '#DC3545',
-      rejected: '#DC3545',
+      pending: '#FFA500',      // Orange
+      approved: '#8B5CF6',     // Purple
+      assigned: '#17A2B8',     // Teal
+      in_progress: '#6F42C1',  // Purple
+      completed: '#28A745',    // Green
+      cancelled: '#DC3545',    // Red
+      rejected: '#DC3545',     // Red
     };
-    return statusColors[status] || '#666';
+    return statusColors[status?.toLowerCase()] || '#666';
   },
 
-  // Check if request can be cancelled
+  // Check if request can be cancelled (only pending or approved)
   canCancelRequest: (status) => {
-    return ['pending', 'approved'].includes(status);
+    if (!status) return false;
+    return ['pending', 'approved'].includes(status.toLowerCase());
   },
 
-  // Validate date format (YYYY-MM-DD)
+  // Validate date format (YYYY-MM-DD) and ensure it's in the future
   validateDate: (dateString) => {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(dateString)) {
       return false;
     }
     
-    const date = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    return date >= today;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return false;
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      return date >= today;
+    } catch (error) {
+      console.error('Error validating date:', error);
+      return false;
+    }
   },
 
-  // Format date to YYYY-MM-DD
+  // Format date to YYYY-MM-DD for input fields
   formatDateForInput: (date = new Date()) => {
-    return date.toISOString().split('T')[0];
+    try {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error formatting date for input:', error);
+      return '';
+    }
   },
 };
