@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
-  
+
   const [profile, setProfile] = useState({
     first_name: '',
     last_name: '',
@@ -89,7 +89,7 @@ export default function ProfileScreen() {
         ResidentAPI.getUserProfile(),
         ResidentAPI.getUserAddresses(),
       ]);
-      
+
       if (profileResponse.success && profileResponse.profile) {
         setProfileExists(true);
         const profileData = profileResponse.profile;
@@ -110,7 +110,7 @@ export default function ProfileScreen() {
             push: true,
           },
         });
-        
+
         const dob = String(profileData.date_of_birth || '');
         if (dob && /^\d{4}-\d{2}-\d{2}/.test(dob)) {
           setDobYear(dob.slice(0, 4));
@@ -118,7 +118,7 @@ export default function ProfileScreen() {
           setDobDay(dob.slice(8, 10));
         }
       }
-      
+
       if (addressResponse.success && addressResponse.addresses) {
         setAddresses(addressResponse.addresses);
       }
@@ -133,7 +133,7 @@ export default function ProfileScreen() {
   const saveProfile = async () => {
     try {
       setSaving(true);
-      
+
       const payload = {
         dateOfBirth: profile.date_of_birth,
         gender: profile.gender,
@@ -151,7 +151,7 @@ export default function ProfileScreen() {
         response = await ResidentAPI.createUserProfile(payload);
         if (response.success) setProfileExists(true);
       }
-      
+
       if (response.success) {
         Alert.alert('Success', response.message || 'Profile updated successfully!');
       } else {
@@ -203,13 +203,13 @@ export default function ProfileScreen() {
 
       setSaving(true);
       let response;
-      
+
       if (editingAddress) {
         response = await ResidentAPI.updateUserAddress(editingAddress.id, addressForm);
       } else {
         response = await ResidentAPI.addUserAddress(addressForm);
       }
-      
+
       if (response.success) {
         Alert.alert('Success', response.message || `Address ${editingAddress ? 'updated' : 'added'} successfully!`);
         setShowAddressModal(false);
@@ -281,7 +281,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
         </View>
-        
+
         {/* Combined Profile Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -305,12 +305,20 @@ export default function ProfileScreen() {
             <Text style={styles.infoValue}>{profile.phone_number}</Text>
           </View>
 
-          <View style={styles.divider} />
+          
 
           {/* Editable fields */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Date of Birth</Text>
-            <View style={styles.dobRow}>
+            <Text style={styles.infoValue}>
+              {new Date(profile.date_of_birth).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </Text>
+            {/* <View style={styles.dobRow}>
+              
               <View style={[styles.pickerContainer, styles.dobPicker]}>
                 <Picker
                   selectedValue={dobYear}
@@ -359,12 +367,13 @@ export default function ProfileScreen() {
                   ))}
                 </Picker>
               </View>
-            </View>
+            </View> */}
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Gender</Text>
-            <View style={styles.pickerContainer}>
+            <Text style={styles.infoValue}>{profile.gender}</Text>
+            {/* <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={profile.gender}
                 onValueChange={(value) => setProfile({...profile, gender: value})}
@@ -374,15 +383,17 @@ export default function ProfileScreen() {
                 <Picker.Item label="Female" value="female" />
                 <Picker.Item label="Other" value="other" />
               </Picker>
-            </View>
+            </View> */}
           </View>
+
+          <View style={styles.divider} />
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Emergency Contact Name</Text>
             <TextInput
               style={styles.input}
               value={profile.emergency_contact_name}
-              onChangeText={(text) => setProfile({...profile, emergency_contact_name: text})}
+              onChangeText={(text) => setProfile({ ...profile, emergency_contact_name: text })}
               placeholder="Emergency contact name"
             />
           </View>
@@ -392,7 +403,7 @@ export default function ProfileScreen() {
             <TextInput
               style={styles.input}
               value={profile.emergency_contact_phone}
-              onChangeText={(text) => setProfile({...profile, emergency_contact_phone: text})}
+              onChangeText={(text) => setProfile({ ...profile, emergency_contact_phone: text })}
               placeholder="Emergency contact phone"
               keyboardType="phone-pad"
             />
@@ -405,7 +416,7 @@ export default function ProfileScreen() {
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={profile.preferred_collection_time}
-                onValueChange={(value) => setProfile({...profile, preferred_collection_time: value})}
+                onValueChange={(value) => setProfile({ ...profile, preferred_collection_time: value })}
                 style={styles.picker}
               >
                 <Picker.Item label="Morning (8 AM - 12 PM)" value="morning" />
@@ -420,7 +431,7 @@ export default function ProfileScreen() {
             <TextInput
               style={[styles.input, styles.textArea]}
               value={profile.special_instructions}
-              onChangeText={(text) => setProfile({...profile, special_instructions: text})}
+              onChangeText={(text) => setProfile({ ...profile, special_instructions: text })}
               placeholder="Any special instructions..."
               multiline
               numberOfLines={4}
@@ -431,7 +442,7 @@ export default function ProfileScreen() {
           <View style={styles.divider} />
 
           <View style={styles.rowButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.saveButton, saving && styles.buttonDisabled]}
               onPress={saveProfile}
               disabled={saving}
@@ -446,7 +457,7 @@ export default function ProfileScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.signOutButton}
               onPress={async () => {
                 try {
@@ -499,10 +510,10 @@ export default function ProfileScreen() {
               >
                 <View style={styles.addressHeader}>
                   <View style={styles.addressTypeContainer}>
-                    <Ionicons 
-                      name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'business' : 'location'} 
-                      size={20} 
-                      color="#8B5CF6" 
+                    <Ionicons
+                      name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'business' : 'location'}
+                      size={20}
+                      color="#8B5CF6"
                     />
                     <Text style={styles.addressType}>{address.address_type.toUpperCase()}</Text>
                   </View>
@@ -512,7 +523,7 @@ export default function ProfileScreen() {
                     </View>
                   )}
                 </View>
-                
+
                 <Text style={styles.addressText}>{address.street_address}</Text>
                 {address.apartment_unit && (
                   <Text style={styles.addressText}>Unit: {address.apartment_unit}</Text>
@@ -534,8 +545,8 @@ export default function ProfileScreen() {
         onRequestClose={() => setShowAddressModal(false)}
       >
         <SafeAreaView style={styles.modalContainer}>
-          <KeyboardAvoidingView 
-            style={{ flex: 1 }} 
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
             <View style={styles.modalHeader}>
@@ -545,8 +556,8 @@ export default function ProfileScreen() {
               <Text style={styles.modalTitle}>
                 {editingAddress ? 'Edit Address' : 'Add Address'}
               </Text>
-              <TouchableOpacity 
-                onPress={saveAddress} 
+              <TouchableOpacity
+                onPress={saveAddress}
                 disabled={saving}
               >
                 {saving ? (
@@ -563,7 +574,7 @@ export default function ProfileScreen() {
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={addressForm.address_type}
-                    onValueChange={(value) => setAddressForm({...addressForm, address_type: value})}
+                    onValueChange={(value) => setAddressForm({ ...addressForm, address_type: value })}
                     style={styles.picker}
                   >
                     <Picker.Item label="🏠 Home" value="home" />
@@ -578,7 +589,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={addressForm.street_address}
-                  onChangeText={(text) => setAddressForm({...addressForm, street_address: text})}
+                  onChangeText={(text) => setAddressForm({ ...addressForm, street_address: text })}
                   placeholder="Enter street address"
                 />
               </View>
@@ -588,7 +599,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={addressForm.apartment_unit}
-                  onChangeText={(text) => setAddressForm({...addressForm, apartment_unit: text})}
+                  onChangeText={(text) => setAddressForm({ ...addressForm, apartment_unit: text })}
                   placeholder="Apartment, suite, unit"
                 />
               </View>
@@ -598,7 +609,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={addressForm.area}
-                  onChangeText={(text) => setAddressForm({...addressForm, area: text})}
+                  onChangeText={(text) => setAddressForm({ ...addressForm, area: text })}
                   placeholder="Area or neighborhood"
                 />
               </View>
@@ -608,7 +619,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={addressForm.city}
-                  onChangeText={(text) => setAddressForm({...addressForm, city: text})}
+                  onChangeText={(text) => setAddressForm({ ...addressForm, city: text })}
                   placeholder="City"
                 />
               </View>
@@ -618,7 +629,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={addressForm.postal_code}
-                  onChangeText={(text) => setAddressForm({...addressForm, postal_code: text})}
+                  onChangeText={(text) => setAddressForm({ ...addressForm, postal_code: text })}
                   placeholder="Postal code"
                 />
               </View>
@@ -628,7 +639,7 @@ export default function ProfileScreen() {
                 <TextInput
                   style={styles.input}
                   value={addressForm.landmark}
-                  onChangeText={(text) => setAddressForm({...addressForm, landmark: text})}
+                  onChangeText={(text) => setAddressForm({ ...addressForm, landmark: text })}
                   placeholder="Nearby landmark"
                 />
               </View>
