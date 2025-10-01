@@ -150,15 +150,15 @@ export const ResidentAPI = {
 
     // Backend expects snake_case based on the response format
     const payload = {
-      service_type_id: requestData.serviceTypeId,
-      address_id: requestData.addressId,
+      serviceTypeId: requestData.serviceTypeId,
+      addressId: requestData.addressId,
       title: requestData.title,
       description: requestData.description || null,
-      preferred_date: requestData.preferredDate,
-      preferred_time_slot: requestData.preferredTimeSlot || 'morning',
-      special_instructions: requestData.specialInstructions || null,
-      estimated_weight: requestData.estimatedWeight || null,
-      estimated_bags: requestData.estimatedBags || null,
+      preferredDate: requestData.preferredDate,
+      preferredTimeSlot: requestData.preferredTimeSlot || 'morning',
+      specialInstructions: requestData.specialInstructions || null,
+      estimatedWeight: requestData.estimatedWeight || null,
+      estimatedBags: requestData.estimatedBags || null,
     };
 
     return apiCall('/service-requests', {
