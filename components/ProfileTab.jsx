@@ -330,6 +330,38 @@ export default function ProfileTab() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
         
+        <TouchableOpacity 
+          style={styles.actionBtn}
+          onPress={() => router.push('/feedback')}
+        >
+          <View style={styles.actionContent}>
+            <View style={styles.actionIconContainer}>
+              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6d28d9" />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Send Feedback</Text>
+              <Text style={styles.actionSubtitle}>Report bugs, request features, or share ideas</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#64748b" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionBtn}
+          onPress={() => router.push('/my-feedback')}
+        >
+          <View style={styles.actionContent}>
+            <View style={styles.actionIconContainer}>
+              <Ionicons name="list-outline" size={24} color="#6d28d9" />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>My Feedback</Text>
+              <Text style={styles.actionSubtitle}>View your submitted feedback and responses</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#64748b" />
+        </TouchableOpacity>
+        
         <TouchableOpacity style={styles.actionBtn}>
           <View style={styles.actionContent}>
             <View style={styles.actionIconContainer}>

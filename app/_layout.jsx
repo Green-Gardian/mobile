@@ -60,6 +60,22 @@ function RouterStack() {
       ) : (
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       )}
+      <Stack.Screen 
+        name="feedback" 
+        options={{ 
+          presentation: 'modal', 
+          headerShown: false,
+          title: 'Send Feedback' 
+        }} 
+      />
+      <Stack.Screen 
+        name="my-feedback" 
+        options={{ 
+          presentation: 'modal', 
+          headerShown: false,
+          title: 'My Feedback' 
+        }} 
+      />
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
     </Stack>
   );
