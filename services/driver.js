@@ -3,13 +3,11 @@ import { getAccessToken } from './api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Create driver API instance
 const driverApi = axios.create({
   baseURL: API_BASE_URL + '/driver',
   timeout: 15000,
 });
 
-// Attach Authorization header
 driverApi.interceptors.request.use(async (config) => {
   const token = await getAccessToken();
   console.log('Driver API request:', config.url, 'Token:', !!token);
@@ -20,7 +18,6 @@ driverApi.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Add response interceptor for debugging
 driverApi.interceptors.response.use(
   (response) => {
     console.log('Driver API response:', response.config.url, response.status, response.data);
@@ -40,7 +37,7 @@ export const DriverAPI = {
   updateDriver: (driverId, data) => driverApi.put(`/update-driver/${driverId}`, data),
   
   // Get driver work areas
-  getWorkAreas: (driverId) => driverApi.get(`/${driverId}/work-areas`),
+  getWorkAreas: (driverId) => driverApi.get(`/work-areas`),
   
   // Get collection routes
   getCollectionRoutes: (driverId) => driverApi.get(`/${driverId}/routes`),

@@ -7,7 +7,7 @@ const BASE_URL = `${API_BASE}/services`;
 const apiCall = async (endpoint, options = {}) => {
   try {
     const token = await getAccessToken();
-    
+
     if (!token) {
       throw new Error('No access token available');
     }
@@ -16,7 +16,7 @@ const apiCall = async (endpoint, options = {}) => {
     if (options.body) {
       console.log('[API] Request body:', options.body);
     }
-    
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
@@ -143,22 +143,22 @@ export const ResidentAPI = {
     // Validate required fields
     const requiredFields = ['serviceTypeId', 'addressId', 'title', 'preferredDate'];
     const missingFields = requiredFields.filter(field => !requestData[field]);
-    
+
     if (missingFields.length > 0) {
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
     // Backend expects snake_case based on the response format
     const payload = {
-      service_type_id: requestData.serviceTypeId,
-      address_id: requestData.addressId,
+      serviceTypeId: requestData.serviceTypeId,
+      addressId: requestData.addressId,
       title: requestData.title,
       description: requestData.description || null,
-      preferred_date: requestData.preferredDate,
-      preferred_time_slot: requestData.preferredTimeSlot || 'morning',
-      special_instructions: requestData.specialInstructions || null,
-      estimated_weight: requestData.estimatedWeight || null,
-      estimated_bags: requestData.estimatedBags || null,
+      preferredDate: requestData.preferredDate,
+      preferredTimeSlot: requestData.preferredTimeSlot || 'morning',
+      specialInstructions: requestData.specialInstructions || null,
+      estimatedWeight: requestData.estimatedWeight || null,
+      estimatedBags: requestData.estimatedBags || null,
     };
 
     return apiCall('/service-requests', {
@@ -183,10 +183,10 @@ export const ResidentAPI = {
 
   // ===== FEEDBACK =====
   submitFeedback: async (requestId, feedbackData) => {
-    // Payload: { rating: number (1-5), comment: string }
+    // Backend expects: { overallRating: number (1-5), comments: string }
     const payload = {
-      rating: feedbackData.rating,
-      comment: feedbackData.comment,
+      overallRating: feedbackData.rating,
+      comments: feedbackData.comment,
     };
 
     return apiCall(`/service-requests/${requestId}/feedback`, {
@@ -289,14 +289,14 @@ export const ServiceRequestUtils = {
     if (!dateRegex.test(dateString)) {
       return false;
     }
-    
+
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return false;
-      
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       return date >= today;
     } catch (error) {
       console.error('Error validating date:', error);

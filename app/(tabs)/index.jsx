@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,6 +18,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
   const { signOut, state } = useAuth();
   const navigation = useNavigation();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   
   // Check if user is driver or resident
@@ -253,9 +255,17 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Driver Dashboard</Text>
-          <TouchableOpacity style={styles.notificationBtn}>
-            <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity 
+              style={styles.headerBtn}
+              onPress={() => router.push('/feedback')}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6d28d9" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
+            </TouchableOpacity>
+          </View>
         </View>
 
          {/* Welcome Card */}
@@ -567,6 +577,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#4c1d95',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notificationBtn: {
     width: 40,
