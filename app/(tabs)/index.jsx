@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Alert, TextInput } from 'react-native';
 import PerformanceTab from '../../components/PerformanceTab';
 import ProfileTab from '../../components/ProfileTab';
 import TasksTab from '../../components/TasksTab';
@@ -20,7 +20,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
-  
+
   // Check if user is driver or resident
   const isDriver = state.user?.role === 'driver';
   const isResident = state.user?.role === 'resident';
@@ -32,6 +32,12 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(isDriver); // Only loading for drivers
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Task completion state
+  const [completingTask, setCompletingTask] = useState(null);
+  const [completionNotes, setCompletionNotes] = useState('');
+  const [collectionWeight, setCollectionWeight] = useState('');
+  const [completing, setCompleting] = useState(false);
 
   // Load driver data on component mount (only for drivers)
   useEffect(() => {
@@ -63,14 +69,14 @@ export default function HomeScreen() {
         setLoading(true);
       }
       setError(null);
-      
+
       console.log('Loading driver data...');
-      
+
       // Load driver profile
       console.log('Calling DriverAPI.getDriverProfile()...');
       const profileResponse = await DriverAPI.getDriverProfile();
       console.log('Profile response:', profileResponse.data);
-      
+
       if (profileResponse.data.drivers && profileResponse.data.drivers.length > 0) {
         const driver = profileResponse.data.drivers[0];
         setDriverData({
@@ -95,38 +101,18 @@ export default function HomeScreen() {
       console.log('Calling DriverAPI.getCurrentTasks()...');
       const tasksResponse = await DriverAPI.getCurrentTasks();
       console.log('Tasks response:', tasksResponse.data);
-      
+
       if (tasksResponse.data.tasks) {
         setCurrentTasks(tasksResponse.data.tasks);
       } else {
-        // Set default tasks if API doesn't return data
-        setCurrentTasks([
-          {
-            id: 1,
-            bin_id: 'BIN_001',
-            location: { address: 'House #123, Street 5, Sector A' },
-            priority: 'high',
-            status: 'in_progress',
-            fill_level: 85,
-            estimated_time: '30 min'
-          },
-          {
-            id: 2,
-            bin_id: 'BIN_007',
-            location: { address: 'Park Area, Sector A' },
-            priority: 'medium',
-            status: 'pending',
-            fill_level: 30,
-            estimated_time: '15 min'
-          }
-        ]);
+        setCurrentTasks([]);
       }
 
       // Load vehicle data
       console.log('Calling VehicleAPI.getVehicles()...');
       const vehicleResponse = await VehicleAPI.getVehicles();
       console.log('Vehicle response:', vehicleResponse.data);
-      
+
       if (vehicleResponse.data.vehicles && vehicleResponse.data.vehicles.length > 0) {
         const vehicle = vehicleResponse.data.vehicles[0]; // Get first vehicle
         setVehicleData({
@@ -135,39 +121,15 @@ export default function HomeScreen() {
           status: vehicle.status || 'active'
         });
       } else {
-        // Set default vehicle data if no vehicles found
-        setVehicleData({
-          plateNo: 'ISB-2024',
-          model: 'Toyota Hilux',
-          status: 'active'
-        });
+        setVehicleData(null);
       }
     } catch (err) {
       console.error('Error loading driver data:', err);
       console.error('Error details:', err.response?.data || err.message);
       setError('Failed to load driver data');
-      // Set default data on error
-      setDriverData({
-        name: 'Driver',
-        id: 'DRV001',
-        email: 'driver@greenguardian.com',
-        phone: '+92 300 0000000',
-        status: 'active',
-        rating: 4.8,
-        totalCollections: 156,
-        todayCollections: 8,
-        workAreas: 2,
-        vehicle: {
-          plateNo: 'ISB-2024',
-          model: 'Toyota Hilux',
-          status: 'active'
-        }
-      });
-      setVehicleData({
-        plateNo: 'ISB-2024',
-        model: 'Toyota Hilux',
-        status: 'active'
-      });
+      setDriverData(null);
+      setVehicleData(null);
+      setCurrentTasks([]);
     } finally {
       if (isRefresh) {
         setRefreshing(false);
@@ -180,6 +142,32 @@ export default function HomeScreen() {
   const onRefresh = () => {
     if (isDriver && state.user) {
       loadDriverData(true);
+    }
+  };
+
+  const handleCompleteTask = async (taskId) => {
+    try {
+      setCompleting(true);
+      await DriverAPI.completeTask(taskId, {
+        notes: completionNotes,
+        collection_weight: collectionWeight ? parseFloat(collectionWeight) : null
+      });
+
+      // Refresh tasks
+      await loadDriverData();
+
+      // Close modal and reset
+      setCompletingTask(null);
+      setCompletionNotes('');
+      setCollectionWeight('');
+
+      // Show success message (you can use a toast library or Alert)
+      console.log('Task completed successfully');
+    } catch (error) {
+      console.error('Error completing task:', error);
+      setError('Failed to complete task');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -241,7 +229,7 @@ export default function HomeScreen() {
     }
 
     return (
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -256,7 +244,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Driver Dashboard</Text>
           <View style={styles.headerButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.headerBtn}
               onPress={() => router.push('/feedback')}
             >
@@ -268,31 +256,31 @@ export default function HomeScreen() {
           </View>
         </View>
 
-         {/* Welcome Card */}
-         <View style={styles.welcomeCard}>
-           <LinearGradient
-             colors={['#6d28d9', '#8b5cf6']}
-             style={styles.welcomeGradient}
-           >
-             {/* Status Badge - Top Right Corner */}
-             <View style={styles.statusBadgeCorner}>
-               <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
-             </View>
-             
-             <View style={styles.welcomeContent}>
-               <View style={styles.profileSection}>
-                 <View style={styles.avatar}>
-                   <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
-                 </View>
-                 <View style={styles.profileInfo}>
-                   <Text style={styles.welcomeText}>Welcome back!</Text>
-                   <Text style={styles.driverName}>{driverData.name}</Text>
-                   <Text style={styles.driverId}>ID: {driverData.id}</Text>
-                 </View>
-               </View>
-             </View>
-           </LinearGradient>
-         </View>
+        {/* Welcome Card */}
+        <View style={styles.welcomeCard}>
+          <LinearGradient
+            colors={['#6d28d9', '#8b5cf6']}
+            style={styles.welcomeGradient}
+          >
+            {/* Status Badge - Top Right Corner */}
+            <View style={styles.statusBadgeCorner}>
+              <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
+            </View>
+
+            <View style={styles.welcomeContent}>
+              <View style={styles.profileSection}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
+                </View>
+                <View style={styles.profileInfo}>
+                  <Text style={styles.welcomeText}>Welcome back!</Text>
+                  <Text style={styles.driverName}>{driverData.name}</Text>
+                  <Text style={styles.driverId}>ID: {driverData.id}</Text>
+                </View>
+              </View>
+            </View>
+          </LinearGradient>
+        </View>
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
@@ -318,35 +306,51 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Current Tasks</Text>
-             <View style={styles.sectionHeaderRight}>
-               <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-                 <Ionicons name="refresh-outline" size={20} color="#6d28d9" />
-               </TouchableOpacity>
-               <TouchableOpacity>
-                 <Text style={styles.seeAllText}>See All</Text>
-               </TouchableOpacity>
-             </View>
+            <View style={styles.sectionHeaderRight}>
+              <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+                <Ionicons name="refresh-outline" size={20} color="#6d28d9" />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          {currentTasks.map((task) => (
-            <View key={task.id} style={styles.taskCard}>
-              <View style={styles.taskHeader}>
-                <Text style={styles.binId}>{task.bin_id || task.binId}</Text>
-                <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? '#ef4444' : '#f59e0b' }]}>
-                  <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
-                </View>
-              </View>
-              <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
-              <View style={styles.taskFooter}>
-                <View style={styles.fillLevelContainer}>
-                  <Text style={styles.fillLevelText}>Fill Level: {task.fill_level || task.fillLevel || 0}%</Text>
-                  <View style={styles.fillLevelBar}>
-                    <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
+          {currentTasks.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="checkmark-done-circle-outline" size={48} color="#cbd5e1" />
+              <Text style={styles.emptyStateText}>No active tasks</Text>
+              <Text style={styles.emptyStateSubtext}>Tasks will appear here when bins need collection</Text>
+            </View>
+          ) : (
+            currentTasks.map((task) => (
+              <View key={task.id} style={styles.taskCard}>
+                <View style={styles.taskHeader}>
+                  <Text style={styles.binId}>{task.bin_id || task.binId}</Text>
+                  <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? '#ef4444' : '#f59e0b' }]}>
+                    <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
                   </View>
                 </View>
-                <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
+                <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
+                <View style={styles.taskFooter}>
+                  <View style={styles.fillLevelContainer}>
+                    <Text style={styles.fillLevelText}>Fill Level: {task.fill_level || task.fillLevel || 0}%</Text>
+                    <View style={styles.fillLevelBar}>
+                      <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
+                    </View>
+                  </View>
+                  <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
+                </View>
+                {/* Complete Task Button */}
+                <TouchableOpacity
+                  style={styles.completeTaskBtn}
+                  onPress={() => setCompletingTask(task)}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.completeTaskBtnText}>Complete Task</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Vehicle Info */}
@@ -367,7 +371,7 @@ export default function HomeScreen() {
   };
 
   const renderResidentOverview = () => (
-    <ScrollView 
+    <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.residentScrollContent}
     >
@@ -384,99 +388,99 @@ export default function HomeScreen() {
         </View>
       ) : (
         <>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Resident Dashboard</Text>
-          <TouchableOpacity style={styles.notificationBtn}>
-            <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
-          </TouchableOpacity>
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Resident Dashboard</Text>
+            <TouchableOpacity style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
+            </TouchableOpacity>
+          </View>
 
-         {/* Welcome Card */}
-         <View style={styles.welcomeCard}>
-           <LinearGradient
-             colors={['#10b981', '#34d399']}
-             style={styles.welcomeGradient}
-           >
-             {/* Status Badge - Top Right Corner */}
-             <View style={styles.statusBadgeCorner}>
-               <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
-             </View>
-             
-             <View style={styles.welcomeContent}>
-               <View style={styles.profileSection}>
-                 <View style={styles.avatar}>
-                   <Text style={styles.avatarText}>{(residentProfile?.full_name || state.user?.username || 'R').split(' ').map(n => n[0]).join('')}</Text>
-                 </View>
-                 <View style={styles.profileInfo}>
-                   <Text style={styles.welcomeText}>Welcome back!</Text>
-                   <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
-                   {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
-                 </View>
-               </View>
-             </View>
-           </LinearGradient>
-         </View>
+          {/* Welcome Card */}
+          <View style={styles.welcomeCard}>
+            <LinearGradient
+              colors={['#10b981', '#34d399']}
+              style={styles.welcomeGradient}
+            >
+              {/* Status Badge - Top Right Corner */}
+              <View style={styles.statusBadgeCorner}>
+                <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
+              </View>
 
-      {/* Stats Cards */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{residentRequests.length}</Text>
-          <Text style={styles.statLabel}>Total Requests</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'pending').length}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'completed').length}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
-        </View>
-         <View style={styles.statCard}>
-           <Ionicons name="calendar-outline" size={24} color="#6d28d9" />
-           <Text style={styles.statLabel}>Next Collection</Text>
-         </View>
-      </View>
+              <View style={styles.welcomeContent}>
+                <View style={styles.profileSection}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{(residentProfile?.full_name || state.user?.username || 'R').split(' ').map(n => n[0]).join('')}</Text>
+                  </View>
+                  <View style={styles.profileInfo}>
+                    <Text style={styles.welcomeText}>Welcome back!</Text>
+                    <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
+                    {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
+                  </View>
+                </View>
+              </View>
+            </LinearGradient>
+          </View>
 
-      {/* Next Collection Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Next Collection</Text>
-        <View style={styles.taskCard}>
-          <View style={styles.taskHeader}>
-            <Text style={styles.binId}>Collection Scheduled</Text>
-            <View style={[styles.priorityBadge, { backgroundColor: '#10b981' }]}>
-              <Text style={styles.priorityText}>CONFIRMED</Text>
+          {/* Stats Cards */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{residentRequests.length}</Text>
+              <Text style={styles.statLabel}>Total Requests</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'pending').length}</Text>
+              <Text style={styles.statLabel}>Pending</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'completed').length}</Text>
+              <Text style={styles.statLabel}>Completed</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="calendar-outline" size={24} color="#6d28d9" />
+              <Text style={styles.statLabel}>Next Collection</Text>
             </View>
           </View>
-          <Text style={styles.taskLocation}>{ServiceRequestUtils.formatDateTime(
-            (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.scheduled_date) ||
-            (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.preferred_date)
-          ) || 'N/A'}</Text>
-          <View style={styles.taskFooter}>
-            <Text style={styles.fillLevelText}>Status: Scheduled</Text>
-            <Text style={styles.estimatedTime}>Regular pickup</Text>
-          </View>
-        </View>
-      </View>
 
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-         <View style={styles.quickActionsContainer}>
-           <TouchableOpacity style={styles.quickActionButton}>
-             <Ionicons name="call-outline" size={24} color="#6d28d9" />
-             <Text style={styles.quickActionText}>Request Service</Text>
-           </TouchableOpacity>
-           <TouchableOpacity style={styles.quickActionButton}>
-             <Ionicons name="location-outline" size={24} color="#6d28d9" />
-             <Text style={styles.quickActionText}>Update Address</Text>
-           </TouchableOpacity>
-           <TouchableOpacity style={styles.quickActionButton}>
-             <Ionicons name="chatbubble-outline" size={24} color="#6d28d9" />
-             <Text style={styles.quickActionText}>Contact Support</Text>
-           </TouchableOpacity>
-         </View>
-      </View>
+          {/* Next Collection Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Next Collection</Text>
+            <View style={styles.taskCard}>
+              <View style={styles.taskHeader}>
+                <Text style={styles.binId}>Collection Scheduled</Text>
+                <View style={[styles.priorityBadge, { backgroundColor: '#10b981' }]}>
+                  <Text style={styles.priorityText}>CONFIRMED</Text>
+                </View>
+              </View>
+              <Text style={styles.taskLocation}>{ServiceRequestUtils.formatDateTime(
+                (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.scheduled_date) ||
+                (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.preferred_date)
+              ) || 'N/A'}</Text>
+              <View style={styles.taskFooter}>
+                <Text style={styles.fillLevelText}>Status: Scheduled</Text>
+                <Text style={styles.estimatedTime}>Regular pickup</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Quick Actions */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsContainer}>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <Ionicons name="call-outline" size={24} color="#6d28d9" />
+                <Text style={styles.quickActionText}>Request Service</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <Ionicons name="location-outline" size={24} color="#6d28d9" />
+                <Text style={styles.quickActionText}>Update Address</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.quickActionButton}>
+                <Ionicons name="chatbubble-outline" size={24} color="#6d28d9" />
+                <Text style={styles.quickActionText}>Contact Support</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </>
       )}
     </ScrollView>
@@ -496,7 +500,7 @@ export default function HomeScreen() {
     if (isResident) {
       return renderResidentOverview();
     }
-    
+
     // Driver content
     if (isDriver) {
       switch (activeTab) {
@@ -508,7 +512,7 @@ export default function HomeScreen() {
         default: return renderDriverOverview();
       }
     }
-    
+
     // Fallback for unknown roles
     return (
       <View style={styles.loadingContainer}>
@@ -540,10 +544,10 @@ export default function HomeScreen() {
               onPress={() => setActiveTab(tab.key)}
             >
               <View style={[styles.tabIconContainer, activeTab === tab.key && styles.activeTabIconContainer]}>
-                <Ionicons 
-                  name={tab.icon} 
-                  size={20} 
-                  color={activeTab === tab.key ? '#6d28d9' : '#a78bfa'} 
+                <Ionicons
+                  name={tab.icon}
+                  size={20}
+                  color={activeTab === tab.key ? '#6d28d9' : '#a78bfa'}
                 />
               </View>
               <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
@@ -553,6 +557,84 @@ export default function HomeScreen() {
           ))}
         </View>
       )}
+
+      {/* Task Completion Modal */}
+      <Modal
+        visible={!!completingTask}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCompletingTask(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Complete Task</Text>
+              <TouchableOpacity onPress={() => setCompletingTask(null)}>
+                <Ionicons name="close-outline" size={28} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {completingTask && (
+              <View style={styles.modalBody}>
+                <Text style={styles.modalBinInfo}>
+                  Bin: {completingTask.bin_name || completingTask.bin_id}
+                </Text>
+                <Text style={styles.modalLocationInfo}>
+                  {completingTask.location?.address || 'Location not available'}
+                </Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Collection Weight (kg)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter weight in kg"
+                    keyboardType="numeric"
+                    value={collectionWeight}
+                    onChangeText={setCollectionWeight}
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Notes (Optional)</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Add any notes about the collection"
+                    multiline
+                    numberOfLines={4}
+                    value={completionNotes}
+                    onChangeText={setCompletionNotes}
+                  />
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
+                    onPress={() => setCompletingTask(null)}
+                    disabled={completing}
+                  >
+                    <Text style={styles.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.submitBtn, completing && styles.submitBtnDisabled]}
+                    onPress={() => handleCompleteTask(completingTask.id)}
+                    disabled={completing}
+                  >
+                    {completing ? (
+                      <Text style={styles.submitBtnText}>Completing...</Text>
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                        <Text style={styles.submitBtnText}>Complete</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -940,5 +1022,138 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '500',
+  },
+  completeTaskBtn: {
+    backgroundColor: '#10b981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 8,
+  },
+  completeTaskBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  modalBody: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  modalBinInfo: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  modalLocationInfo: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1e293b',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    color: '#64748b',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  submitBtn: {
+    flex: 1,
+    backgroundColor: '#10b981',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  submitBtnDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  submitBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
+    marginTop: 12,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

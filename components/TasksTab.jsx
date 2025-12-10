@@ -22,27 +22,7 @@ export default function TasksTab() {
     } catch (err) {
       console.error('Error loading tasks:', err);
       setError('Failed to load tasks');
-      // Set default tasks on error
-      setCurrentTasks([
-        {
-          id: 1,
-          bin_id: 'BIN_001',
-          location: { address: 'House #123, Street 5, Sector A' },
-          priority: 'high',
-          status: 'in_progress',
-          fill_level: 85,
-          estimated_time: '30 min'
-        },
-        {
-          id: 2,
-          bin_id: 'BIN_007',
-          location: { address: 'Park Area, Sector A' },
-          priority: 'medium',
-          status: 'pending',
-          fill_level: 30,
-          estimated_time: '15 min'
-        }
-      ]);
+      setCurrentTasks([]);
     } finally {
       setLoading(false);
     }
@@ -85,13 +65,13 @@ export default function TasksTab() {
             <Text style={styles.filterText}>Refresh</Text>
           </TouchableOpacity>
         </View>
-        
+
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
-        
+
         {currentTasks.map((task) => (
           <View key={task.id} style={styles.taskCard}>
             <View style={styles.taskHeader}>
@@ -105,9 +85,9 @@ export default function TasksTab() {
                 </View>
               </View>
             </View>
-            
+
             <Text style={styles.taskLocation}>{task.location?.address || 'Location not available'}</Text>
-            
+
             <View style={styles.taskFooter}>
               <View style={styles.fillLevelContainer}>
                 <Text style={styles.fillLevelText}>Fill Level: {task.fill_level || 0}%</Text>
@@ -117,9 +97,9 @@ export default function TasksTab() {
               </View>
               <Text style={styles.estimatedTime}>{task.estimated_time || 'N/A'}</Text>
             </View>
-            
+
             {task.status !== 'completed' && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.updateStatusBtn}
                 onPress={() => handleUpdateTaskStatus(task.id, 'completed')}
               >
