@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState } from 'react-native';
 import { DriverAPI } from '../services/driver';
 
 export default function TasksTab() {
@@ -7,8 +7,29 @@ export default function TasksTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const appState = useRef(AppState.currentState);
+
   useEffect(() => {
+    // Initial load
     loadTasks();
+
+    // Reload when app comes back to foreground
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appState.current && appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        loadTasks();
+      }
+      appState.current = nextAppState;
+    });
+
+    // Periodic polling to pick up new assignments
+    const interval = setInterval(() => {
+      loadTasks();
+    }, 30000);
+
+    return () => {
+      try { subscription.remove(); } catch (e) { /* ignore */ }
+      clearInterval(interval);
+    };
   }, []);
 
   const loadTasks = async () => {
@@ -22,27 +43,8 @@ export default function TasksTab() {
     } catch (err) {
       console.error('Error loading tasks:', err);
       setError('Failed to load tasks');
-      // Set default tasks on error
-      setCurrentTasks([
-        {
-          id: 1,
-          bin_id: 'BIN_001',
-          location: { address: 'House #123, Street 5, Sector A' },
-          priority: 'high',
-          status: 'in_progress',
-          fill_level: 85,
-          estimated_time: '30 min'
-        },
-        {
-          id: 2,
-          bin_id: 'BIN_007',
-          location: { address: 'Park Area, Sector A' },
-          priority: 'medium',
-          status: 'pending',
-          fill_level: 30,
-          estimated_time: '15 min'
-        }
-      ]);
+      // On error, clear tasks so UI shows empty state instead of dummy data
+      setCurrentTasks([]);
     } finally {
       setLoading(false);
     }
@@ -92,6 +94,12 @@ export default function TasksTab() {
           </View>
         )}
         
+        {currentTasks.length === 0 && !error && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No tasks assigned</Text>
+          </View>
+        )}
+
         {currentTasks.map((task) => (
           <View key={task.id} style={styles.taskCard}>
             <View style={styles.taskHeader}>
@@ -269,5 +277,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ef4444',
     textAlign: 'center',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#64748b',
   },
 });
