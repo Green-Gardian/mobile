@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { DriverAPI } from '../../services/driver';
 import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 import { VehicleAPI } from '../../services/vehicle';
+import BinMap from '../../components/BinMap';
 
 const { width } = Dimensions.get('window');
 
@@ -256,12 +257,19 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Live Map Section */}
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <Text style={styles.sectionTitle}>Live Work Map</Text>
+          <BinMap height={250} />
+        </View>
+
         {/* Welcome Card */}
         <View style={styles.welcomeCard}>
           <LinearGradient
             colors={['#6d28d9', '#8b5cf6']}
             style={styles.welcomeGradient}
           >
+            {/* ... rest of welcome card ... */}
             {/* Status Badge - Top Right Corner */}
             <View style={styles.statusBadgeCorner}>
               <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>

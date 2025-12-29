@@ -19,9 +19,9 @@ function RouterStack() {
   const [navigationKey, setNavigationKey] = useState(0);
 
   // Debug logging
-  console.log('Auth state:', { 
-    loading: state.loading, 
-    hasToken: !!state.accessToken, 
+  console.log('Auth state:', {
+    loading: state.loading,
+    hasToken: !!state.accessToken,
     isAuthed,
     user: state.user,
     role: state.user?.role
@@ -60,26 +60,29 @@ function RouterStack() {
       ) : (
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       )}
-      <Stack.Screen 
-        name="feedback" 
-        options={{ 
-          presentation: 'modal', 
+      <Stack.Screen
+        name="feedback"
+        options={{
+          presentation: 'modal',
           headerShown: false,
-          title: 'Send Feedback' 
-        }} 
+          title: 'Send Feedback'
+        }}
       />
-      <Stack.Screen 
-        name="my-feedback" 
-        options={{ 
-          presentation: 'modal', 
+      <Stack.Screen
+        name="my-feedback"
+        options={{
+          presentation: 'modal',
           headerShown: false,
-          title: 'My Feedback' 
-        }} 
+          title: 'My Feedback'
+        }}
       />
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
     </Stack>
   );
 }
+
+import { SocketProvider } from '../context/SocketContext';
+import LocationTracker from '../components/LocationTracker';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -87,7 +90,10 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <RouterStack />
+        <SocketProvider>
+          <LocationTracker />
+          <RouterStack />
+        </SocketProvider>
       </AuthProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
