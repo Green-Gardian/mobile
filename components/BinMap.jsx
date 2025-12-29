@@ -8,7 +8,7 @@ import { useSocket } from '../context/SocketContext';
 
 const { width } = Dimensions.get('window');
 
-export default function BinMap({ height: mapHeight = 300, showControls = true }) {
+export default function BinMap({ height: mapHeight, style, showControls = true }) {
     const [bins, setBins] = useState([]);
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -43,17 +43,19 @@ export default function BinMap({ height: mapHeight = 300, showControls = true })
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('bins:update', (updates) => {
+        const handleBinsUpdate = (updates) => {
             setBins(prev => {
                 const map = new Map(prev.map(b => [b.id, b]));
                 const updateArray = Array.isArray(updates) ? updates : [updates];
                 updateArray.forEach(u => map.set(u.id, u));
                 return Array.from(map.values());
             });
-        });
+        };
+
+        socket.on('bins:update', handleBinsUpdate);
 
         return () => {
-            socket.off('bins:update');
+            socket.off('bins:update', handleBinsUpdate);
         };
     }, [socket]);
 
@@ -84,11 +86,13 @@ export default function BinMap({ height: mapHeight = 300, showControls = true })
         }
     };
 
+    const mapStyle = style ? style : { height: mapHeight || 300, width: '100%' };
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, mapStyle]}>
             <MapView
                 ref={mapRef}
-                style={[styles.map, { height: mapHeight }]}
+                style={StyleSheet.absoluteFillObject}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
                 initialRegion={{
@@ -103,9 +107,9 @@ export default function BinMap({ height: mapHeight = 300, showControls = true })
                     const lon = parseFloat(bin.longitude);
                     if (!lat || !lon) return null;
 
-                    let pinColor = 'green';
-                    if (bin.fill_level >= 90) pinColor = 'red';
-                    else if (bin.fill_level >= 50) pinColor = 'orange';
+                    let color = 'green';
+                    if (bin.fill_level >= 90) color = 'red';
+                    else if (bin.fill_level >= 50) color = 'orange';
 
                     return (
                         <Marker
@@ -113,8 +117,16 @@ export default function BinMap({ height: mapHeight = 300, showControls = true })
                             coordinate={{ latitude: lat, longitude: lon }}
                             title={`Bin #${bin.id}`}
                             description={`Fill: ${bin.fill_level}%`}
-                            pinColor={pinColor}
-                        />
+                        >
+                            <View style={styles.markerContainer}>
+                                <View style={[styles.iconContainer, { backgroundColor: color }]}>
+                                    <Ionicons name="trash" size={16} color="white" />
+                                </View>
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>{bin.fill_level}%</Text>
+                                </View>
+                            </View>
+                        </Marker>
                     );
                 })}
             </MapView>
@@ -134,11 +146,11 @@ export default function BinMap({ height: mapHeight = 300, showControls = true })
                 <View style={styles.legend}>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'red' }]} />
-                        <Text style={styles.legendText}>Alert ({'>'}90%)</Text>
+                        <Text style={styles.legendText}>Alert (>90%)</Text>
                     </View>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'orange' }]} />
-                        <Text style={styles.legendText}>Warn ({'>'}50%)</Text>
+                        <Text style={styles.legendText}>Warn (>50%)</Text>
                     </View>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'green' }]} />
@@ -159,7 +171,8 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 }
+        shadowOffset: { width: 0, height: 2 },
+        position: 'relative'
     },
     map: {
         width: '100%',
@@ -198,5 +211,38 @@ const styles = StyleSheet.create({
     legendText: {
         fontSize: 10,
         fontWeight: '600',
+    },
+    markerContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    iconContainer: {
+        padding: 6,
+        borderRadius: 20,
+        backgroundColor: 'green',
+        borderWidth: 2,
+        borderColor: 'white',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
+    badge: {
+        position: 'absolute',
+        top: -8,
+        right: -8,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        borderWidth: 1,
+        borderColor: '#eee',
+        elevation: 2,
+    },
+    badgeText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#333',
     }
 });

@@ -9,7 +9,7 @@ export default function WorkAreasTab() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Driver Map</Text>
       </View>
-      <BinMap height={height - 150} />
+      <BinMap style={{ flex: 1, width: '100%', height: '100%' }} />
     </View>
   );
 }

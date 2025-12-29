@@ -257,11 +257,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Live Map Section */}
-        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-          <Text style={styles.sectionTitle}>Live Work Map</Text>
-          <BinMap height={250} />
-        </View>
+
 
         {/* Welcome Card */}
         <View style={styles.welcomeCard}>
