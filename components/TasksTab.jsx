@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState } from 'react-native';
 import { DriverAPI } from '../services/driver';
 
 export default function TasksTab() {
@@ -7,8 +7,29 @@ export default function TasksTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const appState = useRef(AppState.currentState);
+
   useEffect(() => {
+    // Initial load
     loadTasks();
+
+    // Reload when app comes back to foreground
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appState.current && appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        loadTasks();
+      }
+      appState.current = nextAppState;
+    });
+
+    // Periodic polling to pick up new assignments
+    const interval = setInterval(() => {
+      loadTasks();
+    }, 30000);
+
+    return () => {
+      try { subscription.remove(); } catch (e) { /* ignore */ }
+      clearInterval(interval);
+    };
   }, []);
 
   const loadTasks = async () => {
@@ -22,6 +43,7 @@ export default function TasksTab() {
     } catch (err) {
       console.error('Error loading tasks:', err);
       setError('Failed to load tasks');
+      // On error, clear tasks so UI shows empty state instead of dummy data
       setCurrentTasks([]);
     } finally {
       setLoading(false);
@@ -69,6 +91,12 @@ export default function TasksTab() {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+        
+        {currentTasks.length === 0 && !error && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No tasks assigned</Text>
           </View>
         )}
 
@@ -249,5 +277,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ef4444',
     textAlign: 'center',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#64748b',
   },
 });

@@ -18,6 +18,10 @@ function RouterStack() {
   const [showSplash, setShowSplash] = useState(true);
   const [navigationKey, setNavigationKey] = useState(0);
 
+
+console.log("API URL:", process.env.EXPO_PUBLIC_API_URL);
+
+
   // Debug logging
   console.log('Auth state:', { 
     loading: state.loading, 
