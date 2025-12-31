@@ -35,7 +35,9 @@ const apiCall = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
-    console.error(`[API] Error for ${endpoint}:`, error);
+    if (!options.silentError) {
+      console.error(`[API] Error for ${endpoint}:`, error);
+    }
     throw error;
   }
 };
@@ -197,7 +199,7 @@ export const ResidentAPI = {
 
   getFeedback: async (requestId) => {
     try {
-      const response = await apiCall(`/service-requests/${requestId}/feedback`);
+      const response = await apiCall(`/service-requests/${requestId}/feedback`, { silentError: true });
       // If success is false and message is "Feedback not found", return null gracefully
       if (!response.success && response.message === 'Feedback not found') {
         return { success: false, feedback: null };

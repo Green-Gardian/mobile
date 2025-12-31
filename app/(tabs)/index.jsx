@@ -326,34 +326,43 @@ export default function HomeScreen() {
               <Text style={styles.emptyStateSubtext}>Tasks will appear here when bins need collection</Text>
             </View>
           ) : (
-            currentTasks.map((task) => (
-              <View key={task.id} style={styles.taskCard}>
-                <View style={styles.taskHeader}>
-                  <Text style={styles.binId}>{task.bin_id || task.binId}</Text>
-                  <View style={[styles.priorityBadge, { backgroundColor: task.priority === 'high' ? '#ef4444' : '#f59e0b' }]}>
-                    <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
-                  </View>
-                </View>
-                <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
-                <View style={styles.taskFooter}>
-                  <View style={styles.fillLevelContainer}>
-                    <Text style={styles.fillLevelText}>Fill Level: {task.fill_level || task.fillLevel || 0}%</Text>
-                    <View style={styles.fillLevelBar}>
-                      <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
+            currentTasks.map((task) => {
+              const isServiceRequest = task.task_type === 'service_request' || task.origin === 'service_request';
+              return (
+                <View key={task.id} style={styles.taskCard}>
+                  <View style={styles.taskHeader}>
+                    <Text style={styles.binId}>{isServiceRequest ? 'REQ' : 'BIN'}: {task.bin_id || task.binId}</Text>
+                    <View style={[styles.priorityBadge, { backgroundColor: isServiceRequest ? '#8b5cf6' : (task.priority === 'high' ? '#ef4444' : '#f59e0b') }]}>
+                      <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
                     </View>
                   </View>
-                  <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
+                  <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
+                  {isServiceRequest && task.title && <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{task.title}</Text>}
+                  <View style={styles.taskFooter}>
+                    <View style={styles.fillLevelContainer}>
+                      <Text style={styles.fillLevelText}>
+                        {isServiceRequest ? `Est. Weight: ${task.fill_level || 0}kg` : `Fill Level: ${task.fill_level || 0}%`}
+                      </Text>
+                      {!isServiceRequest && (
+                        <View style={styles.fillLevelBar}>
+                          <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
+                  </View>
+
+                  {/* Complete Task Button */}
+                  <TouchableOpacity
+                    style={styles.completeTaskBtn}
+                    onPress={() => setCompletingTask(task)}
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                    <Text style={styles.completeTaskBtnText}>Complete Task</Text>
+                  </TouchableOpacity>
                 </View>
-                {/* Complete Task Button */}
-                <TouchableOpacity
-                  style={styles.completeTaskBtn}
-                  onPress={() => setCompletingTask(task)}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                  <Text style={styles.completeTaskBtnText}>Complete Task</Text>
-                </TouchableOpacity>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
