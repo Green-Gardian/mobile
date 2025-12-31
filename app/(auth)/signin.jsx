@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -30,10 +29,7 @@ export default function SignIn() {
   };
 
   return (
-    <LinearGradient
-      colors={['#6d28d9', '#8b5cf6', '#a855f7']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
         style={styles.keyboardView}
@@ -101,13 +97,14 @@ export default function SignIn() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
   },
   keyboardView: {
     flex: 1,
@@ -120,18 +117,18 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
   },
   logoCircle: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#6d28d9',
   },
   logoIcon: {
     fontSize: 40,
@@ -139,13 +136,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#0f172a',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#475569',
     textAlign: 'center',
   },
   formContainer: {
@@ -157,30 +154,30 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#0f172a',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#ffffff',
+    color: '#0f172a',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#e6edf3',
   },
   forgotContainer: {
     alignItems: 'flex-end',
     marginBottom: 30,
   },
   forgotLink: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#6d28d9',
     fontSize: 14,
     fontWeight: '600',
   },
   button: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#6d28d9',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -189,12 +186,12 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonText: {
-    color: '#6d28d9',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },

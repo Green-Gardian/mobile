@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -89,10 +88,7 @@ export default function VerifyOTP() {
   };
 
   return (
-    <LinearGradient
-      colors={['#6d28d9', '#8b5cf6', '#a855f7']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
         style={styles.keyboardView}
@@ -132,7 +128,7 @@ export default function VerifyOTP() {
                   <Text style={styles.label}>OTP Code</Text>
                   <TextInput
                     placeholder="123456"
-                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    placeholderTextColor="#94a3b8"
                     value={otp}
                     onChangeText={setOtp}
                     keyboardType="numeric"
@@ -166,7 +162,7 @@ export default function VerifyOTP() {
                   <Text style={styles.label}>New Password</Text>
                   <TextInput
                     placeholder="New password"
-                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    placeholderTextColor="#94a3b8"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -178,7 +174,7 @@ export default function VerifyOTP() {
                   <Text style={styles.label}>Confirm Password</Text>
                   <TextInput
                     placeholder="Confirm password"
-                    placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                    placeholderTextColor="#94a3b8"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
@@ -207,13 +203,14 @@ export default function VerifyOTP() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
   },
   keyboardView: {
     flex: 1,
@@ -232,12 +229,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#6d28d9',
   },
   logoIcon: {
     fontSize: 40,
@@ -245,19 +242,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#0f172a',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#475569',
     textAlign: 'center',
     marginBottom: 8,
   },
   emailText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#0f172a',
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -270,34 +267,34 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#0f172a',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#ffffff',
+    color: '#0f172a',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#e6e9ef',
   },
   otpInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#f1f5f9',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: 4,
-    color: '#ffffff',
+    color: '#0f172a',
     textAlign: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#e6e9ef',
   },
   button: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#6d28d9',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -312,7 +309,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   buttonText: {
-    color: '#6d28d9',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -321,7 +318,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resendText: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#6d28d9',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -330,18 +327,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#475569',
     fontSize: 14,
     fontWeight: '600',
   },
   info: {
-    color: '#ffffff',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    color: '#0f172a',
+    backgroundColor: '#f8fafc',
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
     textAlign: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#e6e9ef',
   },
 });
