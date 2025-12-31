@@ -16,15 +16,78 @@ import BinMap from '../../components/BinMap';
 
 const { width } = Dimensions.get('window');
 
+import * as Location from 'expo-location';
+import { useSocket } from '../../context/SocketContext';
+
+// ... imports
+
 export default function HomeScreen() {
   const { signOut, state } = useAuth();
   const navigation = useNavigation();
   const router = useRouter();
+  const socket = useSocket();
   const [activeTab, setActiveTab] = useState('overview');
 
   // Check if user is driver or resident
   const isDriver = state.user?.role === 'driver';
   const isResident = state.user?.role === 'resident';
+
+  // Location Tracking Effect
+  useEffect(() => {
+    let locationSubscription = null;
+
+    const startTracking = async () => {
+      if (!isDriver) return;
+
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Permission to access location was denied');
+          return;
+        }
+
+        console.log('Starting location tracking...');
+
+        // Initial location
+        const loc = await Location.getCurrentPositionAsync({});
+        sendLocation(loc);
+
+        // Tracking
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 20000,
+            distanceInterval: 10,
+          },
+          (location) => {
+            console.log('Location update:', location.coords);
+            sendLocation(location);
+          }
+        );
+      } catch (err) {
+        console.error('Location tracking error:', err);
+      }
+    };
+
+    const sendLocation = (location) => {
+      if (socket && location && location.coords) {
+        socket.emit('driver:location_update', {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        });
+      }
+    };
+
+    if (isDriver && socket) {
+      startTracking();
+    }
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [isDriver, socket]);
 
   // Driver-specific state
   const [driverData, setDriverData] = useState(null);
