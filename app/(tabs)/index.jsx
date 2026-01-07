@@ -349,9 +349,9 @@ export default function HomeScreen() {
           <View style={styles.headerButtons}>
             <TouchableOpacity
               style={styles.headerBtn}
-              onPress={() => router.push('/feedback')}
+              onPress={() => router.push('/chat/list')}
             >
-              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6d28d9" />
+              <Ionicons name="chatbubbles-outline" size={24} color="#6d28d9" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerBtn}>
               <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
@@ -663,12 +663,12 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.quickActionButton}
-                    onPress={() => router.push('/messages')}
+                    onPress={() => router.push('/chat/list')}
                   >
                     <View style={[styles.actionIconBg, { backgroundColor: '#f5f3ff' }]}>
                       <Ionicons name="chatbubbles-outline" size={24} color="#8b5cf6" />
                     </View>
-                    <Text style={styles.quickActionText}>Help &{"\n"}Support</Text>
+                    <Text style={styles.quickActionText}>Messages</Text>
                   </TouchableOpacity>
                 </View>
               </View>

@@ -28,7 +28,7 @@ export async function getRefreshToken() {
 }
 
 export const api = axios.create({
-  baseURL: API_BASE_URL + '/auth',
+  baseURL: API_BASE_URL,
   timeout: 15000,
 });
 
@@ -72,6 +72,7 @@ api.interceptors.response.use(
         const refreshToken = await getRefreshToken();
         if (!refreshToken) throw new Error('No refresh token');
 
+        // Path updated to include /auth
         const r = await axios.post(API_BASE_URL + '/auth/refresh-token', {
           refresh_token: refreshToken,
         });
@@ -95,23 +96,23 @@ api.interceptors.response.use(
 );
 
 export const AuthAPI = {
-  signIn: (email, password) => api.post('/signin', { email, password }),
-  signOut: (refresh_token) => api.post('/signout', { refresh_token }),
-  forgotPassword: (email) => api.post('/forgot-password', { email, client_type: 'mobile' }),
+  signIn: (email, password) => api.post('/auth/signin', { email, password }),
+  signOut: (refresh_token) => api.post('/auth/signout', { refresh_token }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email, client_type: 'mobile' }),
   resetPassword: (token, newPassword, confirmPassword) =>
-    api.post(`/reset-password?token=${encodeURIComponent(token)}`, {
+    api.post(`/auth/reset-password?token=${encodeURIComponent(token)}`, {
       newPassword,
       confirmPassword,
     }),
   verifyOTPAndResetPassword: (email, otp, newPassword, confirmPassword) =>
-    api.post('/verify-otp-reset', {
+    api.post('/auth/verify-otp-reset', {
       email,
       otp,
       newPassword,
       confirmPassword,
     }),
   verifyEmailAndSetPassword: (token, password, confirmPassword) =>
-    api.post(`/verify-email?token=${encodeURIComponent(token)}`, {
+    api.post(`/auth/verify-email?token=${encodeURIComponent(token)}`, {
       password,
       confirmPassword,
     }),
