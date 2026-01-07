@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { DriverAPI } from '../services/driver';
@@ -9,6 +10,7 @@ import { useSocket } from '../context/SocketContext';
 const { width } = Dimensions.get('window');
 
 export default function BinMap({ height: mapHeight, style, showControls = true }) {
+    const insets = useSafeAreaInsets();
     const [bins, setBins] = useState([]);
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -132,7 +134,7 @@ export default function BinMap({ height: mapHeight, style, showControls = true }
             </MapView>
 
             {showControls && (
-                <View style={styles.controls}>
+                <View style={[styles.controls, { top: (insets?.top || 0) + 10 }]}>
                     <TouchableOpacity style={styles.btn} onPress={centerOnUser}>
                         <Ionicons name="locate" size={24} color="#6d28d9" />
                     </TouchableOpacity>
@@ -143,7 +145,7 @@ export default function BinMap({ height: mapHeight, style, showControls = true }
             )}
 
             {showControls && (
-                <View style={styles.legend}>
+                <View style={[styles.legend, { bottom: (insets?.bottom || 0) + 10 }]}>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'red' }]} />
                         <Text style={styles.legendText}>Alert (>90%)</Text>

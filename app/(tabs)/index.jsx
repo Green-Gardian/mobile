@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Alert, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PerformanceTab from '../../components/PerformanceTab';
 import ProfileTab from '../../components/ProfileTab';
 import TasksTab from '../../components/TasksTab';
@@ -25,6 +26,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const socket = useSocket();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('overview');
 
   // Check if user is driver or resident
@@ -294,7 +296,7 @@ export default function HomeScreen() {
   const renderDriverOverview = () => {
     if (loading) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { paddingTop: (insets?.top || 0) + 40 }]}>
           <Text style={styles.loadingText}>Loading driver data...</Text>
         </View>
       );
@@ -302,7 +304,7 @@ export default function HomeScreen() {
 
     if (error || !driverData) {
       return (
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorContainer, { paddingTop: (insets?.top || 0) + 40 }]}>
           <Text style={styles.errorText}>{error || 'Failed to load driver data'}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadDriverData}>
             <Text style={styles.retryBtnText}>Retry</Text>
@@ -324,7 +326,7 @@ export default function HomeScreen() {
         }
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: (insets?.top || 0) + 12 }]}>
           <Text style={styles.headerTitle}>Driver Dashboard</Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity
@@ -471,11 +473,11 @@ export default function HomeScreen() {
       contentContainerStyle={styles.residentScrollContent}
     >
       {residentLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { paddingTop: (insets?.top || 0) + 40 }]}>
           <Text style={styles.loadingText}>Loading dashboard...</Text>
         </View>
       ) : residentError ? (
-        <View style={styles.errorContainer}>
+        <View style={[styles.errorContainer, { paddingTop: (insets?.top || 0) + 40 }]}>
           <Text style={styles.errorText}>{residentError}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={loadResidentData}>
             <Text style={styles.retryBtnText}>Retry</Text>
@@ -484,7 +486,7 @@ export default function HomeScreen() {
       ) : (
         <>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: (insets?.top || 0) + 12 }]}>
             <Text style={styles.headerTitle}>Resident Dashboard</Text>
             <TouchableOpacity style={styles.notificationBtn}>
               <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
@@ -585,7 +587,7 @@ export default function HomeScreen() {
     // If no user is authenticated, don't render anything
     if (!state.user) {
       return (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { paddingTop: (insets?.top || 0) + 40 }]}>
           <Text style={styles.loadingText}>Redirecting to sign in...</Text>
         </View>
       );

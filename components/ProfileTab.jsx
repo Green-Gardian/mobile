@@ -128,7 +128,7 @@ export default function ProfileTab() {
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
+    <ScrollView showsVerticalScrollIndicator={false} style={styles.container} contentContainerStyle={{ paddingBottom: 36 }}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Driver Profile</Text>
@@ -271,14 +271,6 @@ export default function ProfileTab() {
             <Ionicons name="save-outline" size={20} color="white" />
             <Text style={styles.saveButtonText}>Update Profile</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-          >
-            <Ionicons name="log-out-outline" size={20} color="#6d28d9" />
-            <Text style={styles.signOutButtonText}>Sign Out</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -389,6 +381,14 @@ export default function ProfileTab() {
         </TouchableOpacity>
       </View>
 
+      {/* Bottom Sign Out */}
+      <View style={{ marginHorizontal: 16, marginTop: 20, marginBottom: 32 }}>
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color="white" />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+
     </ScrollView>
   );
 }
@@ -413,10 +413,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   title: {
     fontSize: 24,
@@ -431,10 +431,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   infoCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#ffffff',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
@@ -578,8 +578,8 @@ const styles = StyleSheet.create({
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
   actionContent: {
     flexDirection: 'row',
@@ -614,8 +614,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 8,
-    marginTop: 8,
+    borderRadius: 12,
+    marginTop: 0,
   },
   signOutText: {
     fontSize: 16,

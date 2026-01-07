@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -31,10 +30,7 @@ export default function Reset() {
   };
 
   return (
-    <LinearGradient
-      colors={['#6d28d9', '#8b5cf6', '#a855f7']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
         style={styles.keyboardView}
@@ -61,7 +57,7 @@ export default function Reset() {
               <Text style={styles.label}>New Password</Text>
               <TextInput 
                 placeholder="New password" 
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                placeholderTextColor="#94a3b8"
                 value={password} 
                 onChangeText={setPassword} 
                 secureTextEntry 
@@ -73,7 +69,7 @@ export default function Reset() {
               <Text style={styles.label}>Confirm Password</Text>
               <TextInput 
                 placeholder="Confirm password" 
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
+                placeholderTextColor="#94a3b8"
                 value={confirmPassword} 
                 onChangeText={setConfirmPassword} 
                 secureTextEntry 
@@ -93,7 +89,7 @@ export default function Reset() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
