@@ -39,6 +39,7 @@ api.interceptors.request.use(async (config) => {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
+  console.log('API Request:', config.method.toUpperCase(), config.baseURL, config.url, config.headers);
   return config;
 });
 

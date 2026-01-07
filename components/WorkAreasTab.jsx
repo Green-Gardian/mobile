@@ -3,13 +3,16 @@ import BinMap from './BinMap';
 
 const { width, height } = Dimensions.get('window');
 
-export default function WorkAreasTab() {
+export default function WorkAreasTab({ tasks }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Driver Map</Text>
       </View>
-      <BinMap style={{ flex: 1, width: '100%', height: '100%' }} />
+      <BinMap 
+        tasks={tasks}
+        style={{ flex: 1, width: '100%', height: '100%' }} 
+      />
     </View>
   );
 }

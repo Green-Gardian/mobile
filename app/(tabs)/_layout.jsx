@@ -2,8 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 
-import { HapticTab } from '../../components/haptic-tab';
-import { IconSymbol } from '../../components/ui/icon-symbol';
+import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '../../hooks/use-color-scheme';
 import { useAuth } from '../../context/AuthContext';
 
@@ -19,9 +18,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#6d28d9',
-        tabBarInactiveTintColor: '#c4b5fd',
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: '#059669',
+        tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: Platform.select({
           ios: {
             position: 'absolute',
@@ -30,7 +28,7 @@ export default function TabLayout() {
           default: {
             backgroundColor: 'white',
             borderTopWidth: 1,
-            borderTopColor: '#e9d5ff',
+            borderTopColor: '#e2e8f0',
             height: 64,
             paddingBottom: 10,
             paddingTop: 8,
@@ -48,7 +46,7 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <IconSymbol size={size || 28} name="house.fill" color={color} />
+            <Ionicons size={size || 24} name="home" color={color} />
           ),
         }}
       />
@@ -58,7 +56,7 @@ export default function TabLayout() {
         options={{
           title: 'Services',
           tabBarIcon: ({ color, size }) => (
-            <IconSymbol size={size || 28} name="wrench.and.screwdriver" color={color} />
+            <Ionicons size={size || 24} name="construct" color={color} />
           ),
         }}
       />
@@ -68,7 +66,7 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           tabBarIcon: ({ color, size }) => (
-            <IconSymbol size={size || 28} name="message.circle" color={color} />
+            <Ionicons size={size || 24} name="chatbubbles" color={color} />
           ),
         }}
       />
@@ -78,7 +76,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <IconSymbol size={size || 28} name="person.circle" color={color} />
+            <Ionicons size={size || 24} name="person" color={color} />
           ),
         }}
       />

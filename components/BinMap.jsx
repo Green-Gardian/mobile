@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { DriverAPI } from '../services/driver';
@@ -9,13 +8,17 @@ import { useSocket } from '../context/SocketContext';
 
 const { width } = Dimensions.get('window');
 
-export default function BinMap({ height: mapHeight, style, showControls = true }) {
-    const insets = useSafeAreaInsets();
+export default function BinMap({ height: mapHeight, style, showControls = true, tasks = [] }) {
     const [bins, setBins] = useState([]);
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
     const mapRef = useRef(null);
     const socket = useSocket();
+
+    // Identify the active task (the oldest non-completed task)
+    const activeTask = [...(tasks || [])]
+        .filter(t => t.status !== 'completed')
+        .sort((a, b) => new Date(a.assigned_at) - new Date(b.assigned_at))[0];
 
     useEffect(() => {
         (async () => {
@@ -28,8 +31,10 @@ export default function BinMap({ height: mapHeight, style, showControls = true }
             let location = await Location.getCurrentPositionAsync({});
             setLocation(location.coords);
 
-            // Center map on user initially
-            if (mapRef.current) {
+            // If we have an active task, fit to driver + bin
+            if (activeTask && activeTask.location?.lat && activeTask.location?.lng) {
+                fitToTask(location.coords, activeTask);
+            } else if (mapRef.current) {
                 mapRef.current.animateToRegion({
                     latitude: location.coords.latitude,
                     longitude: location.coords.longitude,
@@ -39,8 +44,26 @@ export default function BinMap({ height: mapHeight, style, showControls = true }
             }
         })();
 
-        loadBins();
-    }, []);
+        if (!tasks || tasks.length === 0) {
+            loadBins();
+        }
+    }, [tasks?.length, activeTask?.id]);
+
+    const fitToTask = (driverLoc, task) => {
+        if (!mapRef.current) return;
+
+        const coords = [
+            { latitude: driverLoc.latitude, longitude: driverLoc.longitude },
+            { latitude: parseFloat(task.location.lat), longitude: parseFloat(task.location.lng) }
+        ];
+
+        setTimeout(() => {
+            mapRef.current?.fitToCoordinates(coords, {
+                edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+                animated: true,
+            });
+        }, 500);
+    };
 
     useEffect(() => {
         if (!socket) return;
@@ -79,14 +102,38 @@ export default function BinMap({ height: mapHeight, style, showControls = true }
         let location = await Location.getCurrentPositionAsync({});
         setLocation(location.coords);
         if (mapRef.current) {
-            mapRef.current.animateToRegion({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-            });
+            if (activeTask && activeTask.location?.lat && activeTask.location?.lng) {
+                fitToTask(location.coords, activeTask);
+            } else {
+                mapRef.current.animateToRegion({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                });
+            }
         }
     };
+
+    // Use tasks for markers if available, otherwise use all bins
+    const markersToRender = (tasks && tasks.length > 0)
+        ? tasks.map(t => ({
+            id: t.id,
+            latitude: t.location?.lat,
+            longitude: t.location?.lng,
+            name: t.bin_id,
+            fill_level: t.fill_level,
+            priority: t.priority,
+            status: t.status
+        }))
+        : bins.map(b => ({
+            id: b.id,
+            latitude: b.latitude,
+            longitude: b.longitude,
+            name: `Bin #${b.id}`,
+            fill_level: b.fill_level,
+            status: 'ok'
+        }));
 
     const mapStyle = style ? style : { height: mapHeight || 300, width: '100%' };
 
@@ -104,55 +151,97 @@ export default function BinMap({ height: mapHeight, style, showControls = true }
                     longitudeDelta: 0.0421,
                 }}
             >
-                {bins.map((bin) => {
-                    const lat = parseFloat(bin.latitude);
-                    const lon = parseFloat(bin.longitude);
+                {markersToRender.map((marker) => {
+                    const lat = parseFloat(marker.latitude);
+                    const lon = parseFloat(marker.longitude);
                     if (!lat || !lon) return null;
 
                     let color = 'green';
-                    if (bin.fill_level >= 90) color = 'red';
-                    else if (bin.fill_level >= 50) color = 'orange';
+                    if (marker.fill_level >= 90) color = 'red';
+                    else if (marker.fill_level >= 50) color = 'orange';
+
+                    const isActive = activeTask && activeTask.id === marker.id;
 
                     return (
                         <Marker
-                            key={bin.id}
+                            key={marker.id}
                             coordinate={{ latitude: lat, longitude: lon }}
-                            title={`Bin #${bin.id}`}
-                            description={`Fill: ${bin.fill_level}%`}
+                            title={marker.name}
+                            description={`Fill: ${marker.fill_level}%${marker.status ? ` - ${marker.status.toUpperCase()}` : ''}`}
+                            pinColor={isActive ? '#6d28d9' : undefined}
                         >
                             <View style={styles.markerContainer}>
-                                <View style={[styles.iconContainer, { backgroundColor: color }]}>
-                                    <Ionicons name="trash" size={16} color="white" />
+                                <View style={[
+                                    styles.iconContainer,
+                                    { backgroundColor: color },
+                                    isActive && { borderColor: '#6d28d9', borderWidth: 3 }
+                                ]}>
+                                    <Ionicons
+                                        name={isActive ? "navigate" : "trash"}
+                                        size={isActive ? 18 : 16}
+                                        color="white"
+                                    />
                                 </View>
                                 <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>{bin.fill_level}%</Text>
+                                    <Text style={styles.badgeText}>{marker.fill_level}%</Text>
                                 </View>
                             </View>
                         </Marker>
                     );
                 })}
+
+                {/* Draw Route Polyline to Active Task */}
+                {location && activeTask && activeTask.location?.lat && activeTask.location?.lng && (
+                    <Polyline
+                        coordinates={[
+                            { latitude: location.latitude, longitude: location.longitude },
+                            { latitude: parseFloat(activeTask.location.lat), longitude: parseFloat(activeTask.location.lng) }
+                        ]}
+                        strokeColor="#6d28d9"
+                        strokeWidth={4}
+                        lineDashPattern={[10, 5]}
+                    />
+                )}
             </MapView>
+
+            {/* Active Task Info Overlay */}
+            {activeTask && (
+                <View style={styles.taskOverlay}>
+                    <View style={styles.taskOverlayHeader}>
+                        <Ionicons name="navigate-circle" size={24} color="#6d28d9" />
+                        <Text style={styles.taskOverlayTitle}>Current Target</Text>
+                    </View>
+                    <Text style={styles.taskOverlayBin}>{activeTask.bin_id}</Text>
+                    <Text style={styles.taskOverlayAddress} numberOfLines={1}>
+                        {activeTask.location?.address || 'Location information unavailable'}
+                    </Text>
+                    <View style={styles.taskOverlayFooter}>
+                        <Text style={styles.taskOverlayDetail}>Priority: {activeTask.priority?.toUpperCase()}</Text>
+                        <Text style={styles.taskOverlayDetail}>Fill: {activeTask.fill_level}%</Text>
+                    </View>
+                </View>
+            )}
 
             {showControls && (
                 <View style={[styles.controls, { top: (insets?.top || 0) + 10 }]}>
                     <TouchableOpacity style={styles.btn} onPress={centerOnUser}>
                         <Ionicons name="locate" size={24} color="#6d28d9" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.btn} onPress={loadBins}>
+                    <TouchableOpacity style={styles.btn} onPress={tasks.length > 0 ? () => { } : loadBins}>
                         <Ionicons name="refresh" size={24} color="#6d28d9" />
                     </TouchableOpacity>
                 </View>
             )}
 
-            {showControls && (
-                <View style={[styles.legend, { bottom: (insets?.bottom || 0) + 10 }]}>
+            {!activeTask && showControls && (
+                <View style={styles.legend}>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'red' }]} />
-                        <Text style={styles.legendText}>Alert (>90%)</Text>
+                        <Text style={styles.legendText}>Alert ({'>'}90%)</Text>
                     </View>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'orange' }]} />
-                        <Text style={styles.legendText}>Warn (>50%)</Text>
+                        <Text style={styles.legendText}>Warn ({'>'}50%)</Text>
                     </View>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'green' }]} />
@@ -246,5 +335,57 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
         color: '#333',
+    },
+    taskOverlay: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        backgroundColor: 'white',
+        borderRadius: 16,
+        padding: 16,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        zIndex: 10,
+        borderLeftWidth: 5,
+        borderLeftColor: '#6d28d9'
+    },
+    taskOverlayHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+        gap: 8
+    },
+    taskOverlayTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#6d28d9',
+        textTransform: 'uppercase'
+    },
+    taskOverlayBin: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        marginBottom: 2
+    },
+    taskOverlayAddress: {
+        fontSize: 12,
+        color: '#64748b',
+        marginBottom: 10
+    },
+    taskOverlayFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        borderTopWidth: 1,
+        borderTopColor: '#f1f5f9',
+        paddingTop: 10
+    },
+    taskOverlayDetail: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#475569'
     }
 });

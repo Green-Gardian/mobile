@@ -11,16 +11,18 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMyFeedback } from '../services/systemFeedbackAPI';
 import { useAuth } from '../context/AuthContext';
 
 const STATUS_COLORS = {
-  open: '#3B82F6',
-  acknowledged: '#8B5CF6',
-  in_progress: '#F59E0B',
-  resolved: '#10B981',
-  closed: '#6B7280',
-  wont_fix: '#EF4444',
+  open: '#3b82f6', // Blue
+  acknowledged: '#8b5cf6', // Purple
+  in_progress: '#f59e0b', // Amber
+  resolved: '#10b981', // Emerald
+  closed: '#64748b', // Slate
+  wont_fix: '#ef4444', // Red
 };
 
 const STATUS_LABELS = {
@@ -33,16 +35,17 @@ const STATUS_LABELS = {
 };
 
 const FEEDBACK_TYPE_ICONS = {
-  bug_report: '🐛',
-  feature_request: '💡',
-  improvement: '⚡',
-  complaint: '😔',
-  praise: '🎉',
-  general: '💬',
+  bug_report: 'bug-outline',
+  feature_request: 'bulb-outline',
+  improvement: 'flash-outline',
+  complaint: 'sad-outline',
+  praise: 'heart-outline',
+  general: 'chatbubble-outline',
 };
 
 export default function MyFeedbackScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,27 +92,29 @@ export default function MyFeedbackScreen() {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'critical': return '#DC2626';
-      case 'high': return '#EF4444';
-      case 'medium': return '#F59E0B';
-      case 'low': return '#10B981';
-      default: return '#6B7280';
+      case 'critical': return '#dc2626';
+      case 'high': return '#ef4444';
+      case 'medium': return '#f59e0b';
+      case 'low': return '#10b981';
+      default: return '#64748b';
     }
   };
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Feedback</Text>
-          <View style={styles.closeButton} />
-        </View>
+        <LinearGradient colors={['#10b981', '#059669']} style={[styles.headerGradient, { paddingTop: insets.top }]}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>My Feedback</Text>
+            <View style={{ width: 40 }} />
+          </View>
+        </LinearGradient>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6d28d9" />
-          <Text style={styles.loadingText}>Loading feedback...</Text>
+          <ActivityIndicator size="large" color="#10b981" />
+          <Text style={styles.loadingText}>Loading your feedback...</Text>
         </View>
       </View>
     );
@@ -117,25 +122,28 @@ export default function MyFeedbackScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Feedback</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/feedback')}
-          style={styles.addButton}
-        >
-          <Ionicons name="add" size={24} color="#6d28d9" />
-        </TouchableOpacity>
-      </View>
+      <LinearGradient colors={['#10b981', '#059669']} style={[styles.headerGradient, { paddingTop: insets.top }]}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Feedback</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/feedback')}
+            style={styles.headerAddBtn}
+          >
+            <Ionicons name="add" size={26} color="#10b981" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       {error && (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={24} color="#EF4444" />
+          <Ionicons name="alert-circle" size={40} color="#ef4444" />
+          <Text style={styles.errorTitle}>Oops!</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity onPress={loadFeedback} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -143,28 +151,31 @@ export default function MyFeedbackScreen() {
       {!error && (
         <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#6d28d9']}
-              tintColor="#6d28d9"
+              colors={['#10b981']}
+              tintColor="#10b981"
             />
           }
         >
           {feedback.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={80} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Feedback Yet</Text>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="chatbubbles-outline" size={80} color="#cbd5e1" />
+              </View>
+              <Text style={styles.emptyTitle}>No feedback found</Text>
               <Text style={styles.emptyMessage}>
-                You haven't submitted any feedback yet. Share your thoughts to help us improve!
+                You haven't submitted any system feedback yet. Your thoughts help us improve!
               </Text>
               <TouchableOpacity
                 style={styles.emptyButton}
                 onPress={() => router.push('/feedback')}
               >
                 <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={styles.emptyButtonText}>Submit Feedback</Text>
+                <Text style={styles.emptyButtonText}>Submit First Feedback</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -173,70 +184,84 @@ export default function MyFeedbackScreen() {
                 <TouchableOpacity
                   key={item.id}
                   style={styles.feedbackCard}
+                  activeOpacity={0.7}
                   onPress={() => {
-                    // TODO: Navigate to feedback detail screen
-                    Alert.alert('Feedback Details', `Title: ${item.title}\n\nStatus: ${STATUS_LABELS[item.status] || item.status}`);
+                    Alert.alert('Feedback details coming soon', `Status: ${STATUS_LABELS[item.status] || item.status}`);
                   }}
                 >
-                  <View style={styles.feedbackHeader}>
-                    <View style={styles.feedbackTypeContainer}>
-                      <Text style={styles.feedbackTypeIcon}>
-                        {FEEDBACK_TYPE_ICONS[item.feedback_type] || '💬'}
-                      </Text>
-                      <View style={styles.feedbackTitleContainer}>
-                        <Text style={styles.feedbackTitle} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        <View style={styles.feedbackMeta}>
-                          <Text style={styles.categoryText}>{item.category}</Text>
-                          <Text style={styles.dateText}> • {formatDate(item.created_at)}</Text>
+                  <View style={[styles.statusIndicatorBar, { backgroundColor: STATUS_COLORS[item.status] || '#64748b' }]} />
+                  
+                  <View style={styles.cardContent}>
+                    <View style={styles.feedbackHeader}>
+                      <View style={styles.feedbackTypeRow}>
+                        <View style={[styles.typeIconContainer, { backgroundColor: '#f1f5f9' }]}>
+                          <Ionicons 
+                            name={FEEDBACK_TYPE_ICONS[item.feedback_type] || 'chatbubble-outline'} 
+                            size={20} 
+                            color="#1e293b" 
+                          />
+                        </View>
+                        <View style={styles.feedbackTitleContainer}>
+                          <Text style={styles.feedbackTitle} numberOfLines={1}>
+                            {item.title}
+                          </Text>
+                          <View style={styles.feedbackMeta}>
+                            <Text style={styles.categoryText}>{item.category || 'General'}</Text>
+                            <Text style={styles.dateText}> • {formatDate(item.created_at)}</Text>
+                          </View>
                         </View>
                       </View>
-                    </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: STATUS_COLORS[item.status] || '#6B7280' },
-                      ]}
-                    >
-                      <Text style={styles.statusText}>
-                        {STATUS_LABELS[item.status] || item.status}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.feedbackDescription} numberOfLines={2}>
-                    {item.description}
-                  </Text>
-
-                  <View style={styles.feedbackFooter}>
-                    <View
-                      style={[
-                        styles.priorityBadge,
-                        { borderColor: getPriorityColor(item.priority) },
-                      ]}
-                    >
-                      <Text
+                      <View
                         style={[
-                          styles.priorityText,
-                          { color: getPriorityColor(item.priority) },
+                          styles.statusBadge,
+                          { backgroundColor: (STATUS_COLORS[item.status] || '#64748b') + '15' },
+                          { borderColor: (STATUS_COLORS[item.status] || '#64748b') + '30' }
                         ]}
                       >
-                        {item.priority?.toUpperCase() || 'MEDIUM'}
-                      </Text>
+                        <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] || '#64748b' }]}>
+                          {STATUS_LABELS[item.status] || item.status}
+                        </Text>
+                      </View>
                     </View>
-                    {item.admin_response && (
-                      <View style={styles.responseIndicator}>
-                        <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                        <Text style={styles.responseText}>Replied</Text>
+
+                    <Text style={styles.feedbackDescription} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+
+                    <View style={styles.feedbackFooter}>
+                      <View
+                        style={[
+                          styles.priorityBadge,
+                          { borderColor: (getPriorityColor(item.priority) || '#64748b') + '30' },
+                          { backgroundColor: (getPriorityColor(item.priority) || '#64748b') + '10' }
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.priorityText,
+                            { color: getPriorityColor(item.priority) || '#64748b' },
+                          ]}
+                        >
+                          {item.priority?.toUpperCase() || 'MEDIUM'}
+                        </Text>
                       </View>
-                    )}
-                    {item.requires_urgent_attention && (
-                      <View style={styles.urgentBadge}>
-                        <Ionicons name="alert-circle" size={14} color="#EF4444" />
-                        <Text style={styles.urgentText}>Urgent</Text>
-                      </View>
-                    )}
+                      
+                      <View style={{ flex: 1 }} />
+
+                      {item.admin_response && (
+                        <View style={styles.responseIndicator}>
+                          <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                          <Text style={styles.responseText}>Admin Replied</Text>
+                        </View>
+                      )}
+                      
+                      {item.requires_urgent_attention && (
+                        <View style={styles.urgentBadge}>
+                          <Ionicons name="alert-circle" size={14} color="#ef4444" />
+                          <Text style={styles.urgentText}>Urgent</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -253,33 +278,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
+  headerGradient: {
+    paddingBottom: 20,
   },
-  closeButton: {
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  iconBtn: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
   },
-  addButton: {
+  headerAddBtn: {
     width: 40,
     height: 40,
+    backgroundColor: '#fff',
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   loadingContainer: {
     flex: 1,
@@ -287,37 +318,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 16,
     color: '#64748b',
+    fontWeight: '600',
   },
   errorContainer: {
-    padding: 20,
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    margin: 16,
-    borderRadius: 12,
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1e293b',
+    marginTop: 16,
+    marginBottom: 8,
   },
   errorText: {
-    marginTop: 8,
-    marginBottom: 12,
-    fontSize: 14,
-    color: '#DC2626',
+    fontSize: 16,
+    color: '#64748b',
     textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
   },
   retryButton: {
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   retryButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '800',
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   emptyContainer: {
     flex: 1,
@@ -326,12 +367,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     paddingTop: 100,
   },
+  emptyIconContainer: {
+    width: 140,
+    height: 140,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 20,
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1e293b',
+    marginBottom: 12,
   },
   emptyMessage: {
     fontSize: 16,
@@ -343,30 +392,39 @@ const styles = StyleSheet.create({
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#10b981',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
   },
   emptyButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   feedbackList: {
-    padding: 16,
+    padding: 20,
   },
   feedbackCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  statusIndicatorBar: {
+    width: 6,
+    height: '100%',
+  },
+  cardContent: {
+    flex: 1,
+    padding: 16,
   },
   feedbackHeader: {
     flexDirection: 'row',
@@ -374,14 +432,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  feedbackTypeContainer: {
+  feedbackTypeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+    marginRight: 10,
   },
-  feedbackTypeIcon: {
-    fontSize: 24,
+  typeIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
   feedbackTitleContainer: {
@@ -389,9 +451,9 @@ const styles = StyleSheet.create({
   },
   feedbackTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 2,
   },
   feedbackMeta: {
     flexDirection: 'row',
@@ -400,7 +462,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     color: '#64748b',
-    textTransform: 'capitalize',
+    fontWeight: '600',
   },
   dateText: {
     fontSize: 12,
@@ -408,25 +470,24 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
-    textTransform: 'capitalize',
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   feedbackDescription: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#475569',
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   feedbackFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   priorityBadge: {
     borderWidth: 1,
@@ -436,7 +497,7 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   responseIndicator: {
     flexDirection: 'row',
@@ -445,22 +506,23 @@ const styles = StyleSheet.create({
   },
   responseText: {
     fontSize: 12,
-    color: '#10B981',
-    fontWeight: '500',
+    color: '#059669',
+    fontWeight: '700',
   },
   urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#fef2f2',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     gap: 4,
+    marginLeft: 8,
   },
   urgentText: {
     fontSize: 11,
-    color: '#EF4444',
-    fontWeight: '600',
+    color: '#ef4444',
+    fontWeight: '700',
   },
 });
 

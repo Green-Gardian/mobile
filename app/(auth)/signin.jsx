@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 
 export default function SignIn() {
@@ -17,7 +19,6 @@ export default function SignIn() {
     try {
       const result = await signIn(email.trim(), password);
       if (result.success) {
-        // Force navigation to tabs after successful login
         router.replace('/(tabs)');
       }
     } catch (e) {
@@ -29,12 +30,12 @@ export default function SignIn() {
   };
 
   return (
-    <View style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardView}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -42,7 +43,7 @@ export default function SignIn() {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoCircle}>
-              <Text style={styles.logoIcon}>🌱</Text>
+              <Ionicons name="leaf" size={48} color="#6d28d9" />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to Green Guardian</Text>
@@ -50,31 +51,42 @@ export default function SignIn() {
 
           {/* Form Section */}
           <View style={styles.formContainer}>
-            {!!error && <Text style={styles.error}>{error}</Text>}
+            {!!error && (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={20} color="#ef4444" />
+                <Text style={styles.error}>{error}</Text>
+              </View>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                placeholder="you@example.com"
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input}
-              />
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="you@example.com"
+                  placeholderTextColor="#94a3b8"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={styles.input}
+                />
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                placeholder="Enter your password"
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                style={styles.input}
-              />
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="Enter your password"
+                  placeholderTextColor="#94a3b8"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  style={styles.input}
+                />
+              </View>
             </View>
 
             <View style={styles.forgotContainer}>
@@ -85,19 +97,26 @@ export default function SignIn() {
               </Link>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.button, loading && { opacity: 0.7 }]} 
-              onPress={onSubmit} 
+            <TouchableOpacity
+              style={[styles.button, loading && { opacity: 0.7 }]}
+              onPress={onSubmit}
               disabled={loading}
             >
               <Text style={styles.buttonText}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Text>
             </TouchableOpacity>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+                <Text style={styles.footerLink}>Contact Admin</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -117,33 +136,35 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 48,
   },
   logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#ffffff',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#f5f3ff',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    borderWidth: 2,
-    borderColor: '#6d28d9',
-  },
-  logoIcon: {
-    fontSize: 40,
+    shadowColor: '#6d28d9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#1e293b',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#475569',
+    color: '#64748b',
     textAlign: 'center',
+    fontWeight: '500',
   },
   formContainer: {
     width: '100%',
@@ -152,58 +173,88 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
     marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#e6edf3',
+    color: '#1e293b',
+    fontWeight: '500',
   },
   forgotContainer: {
     alignItems: 'flex-end',
-    marginBottom: 30,
+    marginBottom: 32,
   },
   forgotLink: {
     color: '#6d28d9',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   button: {
     backgroundColor: '#6d28d9',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: '#6d28d9',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
   },
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    gap: 12,
   },
   error: {
-    color: '#ff6b6b',
-    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 107, 0.3)',
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 32,
+  },
+  footerText: {
+    color: '#64748b',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  footerLink: {
+    color: '#6d28d9',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 
