@@ -16,13 +16,18 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { ResidentAPI } from '../../services/residentAPI';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadToCloudinary } from '../../utils/cloudinary';
+import { Image } from 'expo-image';
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
@@ -43,6 +48,7 @@ export default function ProfileScreen() {
       sms: true,
       push: true,
     },
+    profile_picture: null,
   });
 
   const [addresses, setAddresses] = useState([]);
@@ -62,6 +68,46 @@ export default function ProfileScreen() {
   const [dobYear, setDobYear] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobDay, setDobDay] = useState('');
+
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'We need camera roll permissions to change your profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled) {
+        setSaving(true);
+        const imageUrl = await uploadToCloudinary(result.assets[0].uri);
+        
+        // Update local state
+        setProfile({ ...profile, profile_picture: imageUrl });
+        
+        // Optional: Auto-save the picture change to backend immediately
+        if (profileExists) {
+          await ResidentAPI.updateUserProfile({
+            ...profile,
+            profilePicture: imageUrl
+          });
+        }
+        
+        Alert.alert('Success', 'Profile picture updated!');
+      }
+    } catch (error) {
+      console.error('Image picking error:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const years = useMemo(() => {
     const current = new Date().getFullYear();
@@ -109,6 +155,7 @@ export default function ProfileScreen() {
             sms: true,
             push: true,
           },
+          profile_picture: profileData.profile_picture || null,
         });
 
         const dob = String(profileData.date_of_birth || '');
@@ -142,6 +189,7 @@ export default function ProfileScreen() {
         notificationPreferences: profile.notification_preferences,
         preferredCollectionTime: profile.preferred_collection_time || null,
         specialInstructions: profile.special_instructions || null,
+        profilePicture: profile.profile_picture || null,
       };
 
       let response;
@@ -276,16 +324,51 @@ export default function ProfileScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>My Profile</Text>
-        </View>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+      >
+        {/* Premium Profile Header */}
+        <LinearGradient
+          colors={['#10b981', '#059669']}
+          style={[styles.profileHeader, { paddingTop: insets.top + 20 }]}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.avatarWrapper}>
+              {profile.profile_picture ? (
+                <Image 
+                  source={{ uri: profile.profile_picture }} 
+                  style={styles.avatarImage} 
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {profile.first_name?.[0]}{profile.last_name?.[0]}
+                </Text>
+              )}
+              <TouchableOpacity style={styles.editAvatarBtn} onPress={pickImage}>
+                <Ionicons name="camera" size={16} color="white" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
+            <Text style={styles.profileEmail}>{profile.email}</Text>
+            
+            <View style={styles.statusBadgeRow}>
+              <View style={styles.premiumBadge}>
+                <Ionicons name="shield-checkmark" size={12} color="white" />
+                <Text style={styles.premiumBadgeText}>VERIFIED RESIDENT</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
 
         {/* Combined Profile Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="person-outline" size={24} color="#8B5CF6" />
+            <Ionicons name="person-outline" size={24} color="#10b981" />
             <Text style={styles.sectionTitle}>Profile Information</Text>
           </View>
 
@@ -305,109 +388,9 @@ export default function ProfileScreen() {
             <Text style={styles.infoValue}>{profile.phone_number}</Text>
           </View>
 
-          
-
-          {/* Editable fields */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date of Birth</Text>
-            <Text style={styles.infoValue}>
-              {new Date(profile.date_of_birth).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
-            {/* <View style={styles.dobRow}>
-              
-              <View style={[styles.pickerContainer, styles.dobPicker]}>
-                <Picker
-                  selectedValue={dobYear}
-                  onValueChange={(value) => {
-                    setDobYear(value);
-                    const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
-                    setProfile({ ...profile, date_of_birth: newDob });
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Year" value="" />
-                  {years.map((y) => (
-                    <Picker.Item key={y} label={y} value={y} />
-                  ))}
-                </Picker>
-              </View>
-              <View style={[styles.pickerContainer, styles.dobPicker]}>
-                <Picker
-                  selectedValue={dobMonth}
-                  onValueChange={(value) => {
-                    setDobMonth(value);
-                    const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
-                    setProfile({ ...profile, date_of_birth: newDob });
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Mon" value="" />
-                  {months.map((m) => (
-                    <Picker.Item key={m} label={m} value={m} />
-                  ))}
-                </Picker>
-              </View>
-              <View style={[styles.pickerContainer, styles.dobPicker]}>
-                <Picker
-                  selectedValue={dobDay}
-                  onValueChange={(value) => {
-                    setDobDay(value);
-                    const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
-                    setProfile({ ...profile, date_of_birth: newDob });
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Day" value="" />
-                  {daysInSelectedMonth.map((d) => (
-                    <Picker.Item key={d} label={d} value={d} />
-                  ))}
-                </Picker>
-              </View>
-            </View> */}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Gender</Text>
-            <Text style={styles.infoValue}>{profile.gender}</Text>
-            {/* <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={profile.gender}
-                onValueChange={(value) => setProfile({...profile, gender: value})}
-                style={styles.picker}
-              >
-                <Picker.Item label="Male" value="male" />
-                <Picker.Item label="Female" value="female" />
-                <Picker.Item label="Other" value="other" />
-              </Picker>
-            </View> */}
-          </View>
 
           <View style={styles.divider} />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Emergency Contact Name</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.emergency_contact_name}
-              onChangeText={(text) => setProfile({ ...profile, emergency_contact_name: text })}
-              placeholder="Emergency contact name"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Emergency Contact Phone</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.emergency_contact_phone}
-              onChangeText={(text) => setProfile({ ...profile, emergency_contact_phone: text })}
-              placeholder="Emergency contact phone"
-              keyboardType="phone-pad"
-            />
-          </View>
 
           <View style={styles.divider} />
 
@@ -470,7 +453,7 @@ export default function ProfileScreen() {
                 }
               }}
             >
-              <Ionicons name="log-out-outline" size={20} color="#8B5CF6" />
+              <Ionicons name="log-out-outline" size={20} color="#059669" />
               <Text style={styles.signOutButtonText}>Sign Out</Text>
             </TouchableOpacity>
           </View>
@@ -479,7 +462,7 @@ export default function ProfileScreen() {
         {/* Addresses Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="location-outline" size={24} color="#8B5CF6" />
+            <Ionicons name="location-outline" size={24} color="#10b981" />
             <Text style={styles.sectionTitle}>My Addresses</Text>
             <TouchableOpacity
               style={styles.addButton}
@@ -503,33 +486,44 @@ export default function ProfileScreen() {
             </View>
           ) : (
             addresses.map((address) => (
-              <TouchableOpacity
-                key={address.id}
-                style={styles.addressCard}
-                onPress={() => openAddressModal(address)}
-              >
-                <View style={styles.addressHeader}>
-                  <View style={styles.addressTypeContainer}>
+              <View key={address.id} style={styles.addressCard}>
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.addressCardHeader}
+                >
+                  <View style={styles.addressTypeWrapper}>
                     <Ionicons
                       name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'business' : 'location'}
-                      size={20}
-                      color="#8B5CF6"
+                      size={18}
+                      color="white"
                     />
-                    <Text style={styles.addressType}>{address.address_type.toUpperCase()}</Text>
+                    <Text style={styles.addressTypeText}>{address.address_type.toUpperCase()}</Text>
                   </View>
-                  {address.is_active && (
-                    <View style={styles.activeBadge}>
-                      <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                  {address.is_default && (
+                    <View style={styles.defaultBadge}>
+                      <Text style={styles.defaultBadgeText}>DEFAULT</Text>
                     </View>
                   )}
-                </View>
+                </LinearGradient>
 
-                <Text style={styles.addressText}>{address.street_address}</Text>
-                {address.apartment_unit && (
-                  <Text style={styles.addressText}>Unit: {address.apartment_unit}</Text>
-                )}
-                <Text style={styles.addressText}>{address.area && `${address.area}, `}{address.city}</Text>
-              </TouchableOpacity>
+                <View style={styles.addressCardBody}>
+                  <Text style={styles.addressMainText}>{address.street_address}</Text>
+                  {address.apartment_unit && <Text style={styles.addressSubText}>Unit: {address.apartment_unit}</Text>}
+                  <Text style={styles.addressSubText}>{address.area}, {address.city}</Text>
+                  
+                  <View style={styles.addressActions}>
+                    <TouchableOpacity 
+                      style={styles.addressActionBtn} 
+                      onPress={() => openAddressModal(address)}
+                    >
+                      <Ionicons name="create-outline" size={18} color="#059669" />
+                      <Text style={styles.addressActionText}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
             ))
           )}
         </View>
@@ -577,9 +571,9 @@ export default function ProfileScreen() {
                     onValueChange={(value) => setAddressForm({ ...addressForm, address_type: value })}
                     style={styles.picker}
                   >
-                    <Picker.Item label="🏠 Home" value="home" />
-                    <Picker.Item label="🏢 Office" value="office" />
-                    <Picker.Item label="📍 Other" value="other" />
+                    <Picker.Item label="Home" value="home" />
+                    <Picker.Item label="Office" value="office" />
+                    <Picker.Item label="Other" value="other" />
                   </Picker>
                 </View>
               </View>
@@ -664,51 +658,258 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 16, fontSize: 16, color: '#666' },
   scrollContainer: { flex: 1 },
-  header: { backgroundColor: 'white', paddingHorizontal: 20, paddingVertical: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  section: { backgroundColor: 'white', marginHorizontal: 16, marginTop: 16, paddingHorizontal: 20, paddingVertical: 16, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginLeft: 12, flex: 1 },
-  infoCard: { backgroundColor: '#f9f9f9', padding: 12, borderRadius: 8, marginBottom: 12 },
-  infoLabel: { fontSize: 12, color: '#666', marginBottom: 4 },
-  infoValue: { fontSize: 16, color: '#333', fontWeight: '500' },
-  divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 16 },
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, backgroundColor: 'white' },
-  dobRow: { flexDirection: 'row', gap: 8 },
-  dobPicker: { flex: 1 },
+  profileHeader: {
+    paddingBottom: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 10,
+  },
+  headerContent: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  avatarWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.4)',
+    marginBottom: 12,
+    position: 'relative',
+    overflow: 'hidden', // Ensure image respects border radius
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  editAvatarBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#065f46',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 12,
+  },
+  statusBadgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 6,
+  },
+  premiumBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  section: { 
+    backgroundColor: 'white', 
+    marginHorizontal: 16, 
+    marginTop: 16, 
+    paddingHorizontal: 20, 
+    paddingVertical: 20, 
+    borderRadius: 20, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 10, 
+    elevation: 2 
+  },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginLeft: 12, flex: 1 },
+  infoCard: { 
+    backgroundColor: '#f8fafc', 
+    padding: 14, 
+    borderRadius: 12, 
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9'
+  },
+  infoLabel: { fontSize: 11, color: '#64748b', marginBottom: 4, fontWeight: '600', textTransform: 'uppercase' },
+  infoValue: { fontSize: 15, color: '#1e293b', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#f1f5f9', marginVertical: 20 },
+  inputGroup: { marginBottom: 18 },
+  label: { fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 8 },
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0', 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    fontSize: 15, 
+    backgroundColor: '#f8fafc',
+    color: '#1e293b'
+  },
   textArea: { height: 100, textAlignVertical: 'top' },
-  pickerContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, backgroundColor: 'white' },
+  pickerContainer: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, backgroundColor: '#f8fafc', overflow: 'hidden' },
   picker: { height: 50 },
-  saveButton: { backgroundColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 8, flex: 1 },
-  buttonDisabled: { backgroundColor: '#ccc' },
-  saveButtonText: { color: 'white', fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  addButton: { backgroundColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
-  addButtonText: { color: 'white', fontSize: 14, fontWeight: '600', marginLeft: 4 },
-  rowButtons: { flexDirection: 'row', gap: 12 },
-  signOutButton: { backgroundColor: '#f3f4f6', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 8, paddingHorizontal: 16 },
-  signOutButtonText: { color: '#8B5CF6', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+  saveButton: { 
+    backgroundColor: '#10b981', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 14, 
+    borderRadius: 12, 
+    flex: 1,
+    elevation: 4,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  buttonDisabled: { backgroundColor: '#94a3b8' },
+  saveButtonText: { color: 'white', fontSize: 16, fontWeight: '700', marginLeft: 8 },
+  addButton: { 
+    backgroundColor: '#10b981', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 14, 
+    paddingVertical: 8, 
+    borderRadius: 20 
+  },
+  addButtonText: { color: 'white', fontSize: 13, fontWeight: '700', marginLeft: 4 },
+  rowButtons: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  signOutButton: { 
+    backgroundColor: '#fef2f2', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 14, 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    borderWidth: 1, 
+    borderColor: '#fee2e2' 
+  },
+  signOutButtonText: { color: '#dc2626', fontSize: 15, fontWeight: '700', marginLeft: 8 },
   emptyAddresses: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 16, color: '#666', marginTop: 12, marginBottom: 20 },
-  addressCard: { backgroundColor: '#f9f9f9', padding: 16, borderRadius: 8, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: '#8B5CF6' },
-  addressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  addressTypeContainer: { flexDirection: 'row', alignItems: 'center' },
-  addressType: { fontSize: 12, fontWeight: '600', color: '#666', marginLeft: 6 },
-  activeBadge: { backgroundColor: '#28A745', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  activeBadgeText: { fontSize: 10, color: 'white', fontWeight: '600' },
-  addressText: { fontSize: 14, color: '#333', marginBottom: 2 },
+  emptyText: { fontSize: 16, color: '#64748b', marginTop: 12, marginBottom: 20 },
+  addressCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addressCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  addressTypeWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addressTypeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  defaultBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  defaultBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  addressCardBody: {
+    padding: 16,
+  },
+  addressMainText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  addressSubText: {
+    fontSize: 13,
+    color: '#64748b',
+    lineHeight: 18,
+  },
+  addressActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  addressActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 6,
+  },
+  addressActionText: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+  },
   modalContainer: { flex: 1, backgroundColor: 'white' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  cancelButton: { color: '#666', fontSize: 16 },
-  modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 16 },
-  modalSaveButtonText: { color: '#8B5CF6', fontSize: 16, fontWeight: '600' },
-  deleteButton: { backgroundColor: '#FF3B30', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 8, marginTop: 16 },
-  deleteButtonText: { color: 'white', fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  bottomSpacing: { height: 80 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
+  cancelButton: { color: '#64748b', fontSize: 15 },
+  modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+  modalSaveButtonText: { color: '#10b981', fontSize: 16, fontWeight: '700' },
+  deleteButton: { 
+    backgroundColor: '#fee2e2', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 14, 
+    borderRadius: 12, 
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#fecaca'
+  },
+  deleteButtonText: { color: '#dc2626', fontSize: 15, fontWeight: '700', marginLeft: 8 },
+  bottomSpacing: { height: 100 },
 });

@@ -1,7 +1,8 @@
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthAPI } from '../../services/api';
 
 export default function Forgot() {
@@ -9,15 +10,17 @@ export default function Forgot() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   const onSubmit = async () => {
     setMsg('');
+    setIsError(false);
     setLoading(true);
     try {
       const res = await AuthAPI.forgotPassword(email.trim());
       setMsg(res?.data?.message || 'If the email exists, we sent a reset OTP.');
+      setIsError(false);
       
-      // Navigate to OTP verification screen after successful request
       setTimeout(() => {
         router.push({
           pathname: '/(auth)/verify-otp',
@@ -26,16 +29,14 @@ export default function Forgot() {
       }, 1500);
     } catch (e) {
       setMsg(e?.response?.data?.message || 'Unable to send reset OTP');
+      setIsError(true);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={['#6d28d9', '#8b5cf6', '#a855f7']}
-      style={styles.container}
-    >
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
         style={styles.keyboardView}
@@ -48,27 +49,39 @@ export default function Forgot() {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoCircle}>
-              <Text style={styles.logoIcon}>🌱</Text>
+              <Ionicons name="shield-half" size={48} color="#6d28d9" />
             </View>
             <Text style={styles.title}>Forgot Password?</Text>
-            <Text style={styles.subtitle}>Enter your email and we ll send you a reset OTP</Text>
+            <Text style={styles.subtitle}>Enter your email to receive a reset OTP</Text>
           </View>
 
           {/* Form Section */}
           <View style={styles.formContainer}>
-            {!!msg && <Text style={styles.info}>{msg}</Text>}
+            {!!msg && (
+              <View style={[styles.infoBanner, isError && styles.errorBanner]}>
+                <Ionicons 
+                  name={isError ? "alert-circle" : "checkmark-circle"} 
+                  size={20} 
+                  color={isError ? "#ef4444" : "#10b981"} 
+                />
+                <Text style={[styles.infoText, isError && styles.errorText]}>{msg}</Text>
+              </View>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                placeholder="you@example.com"
-                placeholderTextColor="rgba(255, 255, 255, 0.7)"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input}
-              />
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
+                <TextInput
+                  placeholder="you@example.com"
+                  placeholderTextColor="#94a3b8"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={styles.input}
+                />
+              </View>
             </View>
 
             <TouchableOpacity 
@@ -81,24 +94,23 @@ export default function Forgot() {
               </Text>
             </TouchableOpacity>
 
-            <View style={styles.backToSignIn}>
-              <Text style={styles.backText}>Remember your password?{' '}</Text>
-              <Link href="/(auth)/signin" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.backLink}>Sign in</Text>
-                </TouchableOpacity>
-              </Link>
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Remember your password? </Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.footerLink}>Sign In</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
   },
   keyboardView: {
     flex: 1,
@@ -111,100 +123,123 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 48,
   },
   logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#f5f3ff',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  logoIcon: {
-    fontSize: 40,
+    shadowColor: '#6d28d9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#1e293b',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#64748b',
     textAlign: 'center',
+    fontWeight: '500',
   },
   formContainer: {
     width: '100%',
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 32,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
     marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    color: '#1e293b',
+    fontWeight: '500',
   },
   button: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: '#6d28d9',
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowColor: '#6d28d9',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 8,
   },
   buttonText: {
-    color: '#6d28d9',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  info: {
     color: '#ffffff',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    textAlign: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
-  backToSignIn: {
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#dcfce7',
+    gap: 12,
+  },
+  infoText: {
+    color: '#166534',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  errorBanner: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fee2e2',
+  },
+  errorText: {
+    color: '#ef4444',
+  },
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 30,
+    marginTop: 32,
   },
-  backText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+  footerText: {
+    color: '#64748b',
     fontSize: 14,
+    fontWeight: '500',
   },
-  backLink: {
-    color: '#ffffff',
+  footerLink: {
+    color: '#6d28d9',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });
 

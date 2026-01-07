@@ -19,18 +19,6 @@ function RouterStack() {
   const [navigationKey, setNavigationKey] = useState(0);
 
 
-console.log("API URL:", process.env.EXPO_PUBLIC_API_URL);
-
-
-  // Debug logging
-  console.log('Auth state:', {
-    loading: state.loading,
-    hasToken: !!state.accessToken,
-    isAuthed,
-    user: state.user,
-    role: state.user?.role
-  });
-
   // Hide splash screen immediately when authentication state is determined
   useEffect(() => {
     if (!state.loading) {
@@ -55,7 +43,6 @@ console.log("API URL:", process.env.EXPO_PUBLIC_API_URL);
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
-  console.log('Navigation decision:', { isAuthed, showSplash, loading: state.loading });
 
   return (
     <Stack key={navigationKey}>

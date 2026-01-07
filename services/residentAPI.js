@@ -82,6 +82,7 @@ export const ResidentAPI = {
       },
       preferredCollectionTime: profileData.preferredCollectionTime || null,
       specialInstructions: profileData.specialInstructions || null,
+      profilePicture: profileData.profilePicture || null,
     };
 
     return apiCall('/profile', {
@@ -171,6 +172,10 @@ export const ResidentAPI = {
 
   getUserServiceRequests: async () => {
     return apiCall('/service-requests');
+  },
+
+  getDashboardStats: async () => {
+    return apiCall('/dashboard/stats');
   },
 
   getServiceRequestById: async (requestId) => {
@@ -268,15 +273,29 @@ export const ServiceRequestUtils = {
   // Get status color based on status
   getStatusColor: (status) => {
     const statusColors = {
-      pending: '#FFA500',      // Orange
-      approved: '#8B5CF6',     // Purple
-      assigned: '#17A2B8',     // Teal
-      in_progress: '#6F42C1',  // Purple
-      completed: '#28A745',    // Green
-      cancelled: '#DC3545',    // Red
-      rejected: '#DC3545',     // Red
+      pending: '#f59e0b',      // Amber
+      approved: '#10b981',     // Emerald
+      assigned: '#0ea5e9',     // Sky
+      in_progress: '#0891b2',  // Cyan
+      completed: '#3b82f6',    // Blue
+      cancelled: '#ef4444',    // Red
+      rejected: '#64748b',     // Slate
     };
-    return statusColors[status?.toLowerCase()] || '#666';
+    return statusColors[status?.toLowerCase()] || '#94a3b8';
+  },
+
+  // Get gradient status colors
+  getStatusColors: (status) => {
+    const statusGradients = {
+      pending: ['#f59e0b', '#d97706'],     // Amber to Orange
+      approved: ['#10b981', '#059669'],    // Emerald to Green
+      assigned: ['#0ea5e9', '#0284c7'],    // Sky to blue
+      in_progress: ['#06b6d4', '#0891b2'], // Cyan to Teal
+      completed: ['#3b82f6', '#2563eb'],   // Blue to Indigo
+      cancelled: ['#ef4444', '#dc2626'],   // Red to Dark Red
+      rejected: ['#94a3b8', '#64748b'],    // Slate to Dark Slate
+    };
+    return statusGradients[status?.toLowerCase()] || ['#94a3b8', '#64748b'];
   },
 
   // Check if request can be cancelled (only pending or approved)

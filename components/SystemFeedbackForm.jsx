@@ -31,12 +31,12 @@ const CATEGORIES = [
 ];
 
 const FEEDBACK_TYPES = [
-    { value: 'bug_report', label: '🐛 Bug Report', description: 'Something isn\'t working' },
-    { value: 'feature_request', label: '💡 Feature Request', description: 'Suggest an idea' },
-    { value: 'improvement', label: '⚡ Improvement', description: 'Make something better' },
-    { value: 'complaint', label: '😔 Complaint', description: 'Report an issue' },
-    { value: 'praise', label: '🎉 Praise', description: 'Share positive feedback' },
-    { value: 'general', label: '💬 General', description: 'General feedback' },
+    { value: 'bug_report', label: 'Bug Report', icon: 'bug-outline', description: 'Something isn\'t working' },
+    { value: 'feature_request', label: 'Feature Request', icon: 'bulb-outline', description: 'Suggest an idea' },
+    { value: 'improvement', label: 'Improvement', icon: 'flash-outline', description: 'Make something better' },
+    { value: 'complaint', label: 'Complaint', icon: 'sad-outline', description: 'Report an issue' },
+    { value: 'praise', label: 'Praise', icon: 'heart-outline', description: 'Share positive feedback' },
+    { value: 'general', label: 'General', icon: 'chatbubble-outline', description: 'General feedback' },
 ];
 
 const PRIORITIES = [
@@ -155,7 +155,6 @@ export default function SystemFeedbackForm({ onSubmit, onCancel, userRole }) {
 
                 {/* Feedback Type Selection */}
                 <View style={styles.section}>
-                    <Text style={styles.label}>Type of Feedback *</Text>
                     <View style={styles.typeGrid}>
                         {FEEDBACK_TYPES.map((type) => (
                             <TouchableOpacity
@@ -166,12 +165,19 @@ export default function SystemFeedbackForm({ onSubmit, onCancel, userRole }) {
                                 ]}
                                 onPress={() => updateField('feedbackType', type.value)}
                             >
-                                <Text style={[
-                                    styles.typeLabel,
-                                    formData.feedbackType === type.value && styles.typeLabelSelected,
-                                ]}>
-                                    {type.label}
-                                </Text>
+                                <View style={styles.typeCardHeader}>
+                                    <Ionicons 
+                                        name={type.icon} 
+                                        size={20} 
+                                        color={formData.feedbackType === type.value ? '#10b981' : '#64748b'} 
+                                    />
+                                    <Text style={[
+                                        styles.typeLabel,
+                                        formData.feedbackType === type.value && styles.typeLabelSelected,
+                                    ]}>
+                                        {type.label}
+                                    </Text>
+                                </View>
                                 <Text style={styles.typeDescription}>{type.description}</Text>
                             </TouchableOpacity>
                         ))}
@@ -273,7 +279,7 @@ export default function SystemFeedbackForm({ onSubmit, onCancel, userRole }) {
                 </View>
 
                 <View style={styles.infoBox}>
-                    <Ionicons name="information-circle-outline" size={20} color="#8B5CF6" />
+                    <Ionicons name="information-circle-outline" size={20} color="#10b981" />
                     <Text style={styles.infoText}>
                         Your feedback helps us improve the app for everyone. Thank you for taking the time!
                     </Text>
@@ -314,56 +320,60 @@ export default function SystemFeedbackForm({ onSubmit, onCancel, userRole }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#f8fafc',
     },
     scrollView: {
         flex: 1,
     },
     header: {
-        padding: 20,
+        padding: 24,
+        backgroundColor: '#ffffff',
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: '#f1f5f9',
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
+        fontSize: 26,
+        fontWeight: '900',
+        color: '#1e293b',
+        marginBottom: 6,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: '#666',
+        color: '#64748b',
+        lineHeight: 20,
     },
     section: {
         paddingHorizontal: 20,
-        paddingTop: 20,
+        paddingTop: 24,
     },
     label: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        fontWeight: '700',
+        color: '#475569',
+        marginBottom: 10,
     },
     pickerContainer: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
+        borderColor: '#e2e8f0',
+        borderRadius: 12,
         backgroundColor: '#fff',
+        overflow: 'hidden',
     },
     picker: {
         height: 50,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
+        borderColor: '#e2e8f0',
+        borderRadius: 12,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 14,
         fontSize: 16,
         backgroundColor: '#fff',
+        color: '#1e293b',
     },
     textArea: {
-        height: 120,
+        height: 140,
         textAlignVertical: 'top',
     },
     inputError: {
@@ -382,24 +392,35 @@ const styles = StyleSheet.create({
     typeCard: {
         width: '48%',
         margin: '1%',
-        padding: 12,
-        borderRadius: 8,
+        padding: 16,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#ddd',
-        backgroundColor: '#f9f9f9',
+        borderColor: '#e2e8f0',
+        backgroundColor: '#ffffff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     typeCardSelected: {
-        borderColor: '#8B5CF6',
-        backgroundColor: '#F3F0FF',
+        borderColor: '#10b981',
+        backgroundColor: '#ecfdf5',
+    },
+    typeCardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
     },
     typeLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 4,
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#1e293b',
+        flex: 1,
     },
     typeLabelSelected: {
-        color: '#8B5CF6',
+        color: '#059669',
     },
     typeDescription: {
         fontSize: 11,
@@ -429,66 +450,77 @@ const styles = StyleSheet.create({
     ratingContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        paddingVertical: 8,
+        paddingVertical: 12,
     },
     star: {
-        marginHorizontal: 4,
+        marginHorizontal: 8,
     },
     infoBox: {
         flexDirection: 'row',
-        backgroundColor: '#F3F0FF',
-        padding: 12,
-        borderRadius: 8,
+        backgroundColor: '#ecfdf5',
+        padding: 16,
+        borderRadius: 12,
         marginHorizontal: 20,
-        marginTop: 20,
+        marginTop: 24,
+        borderWidth: 1,
+        borderColor: '#d1fae5',
     },
     infoText: {
         flex: 1,
-        marginLeft: 8,
+        marginLeft: 12,
         fontSize: 13,
-        color: '#8B5CF6',
+        color: '#059669',
+        lineHeight: 18,
     },
     bottomSpacing: {
         height: 20,
     },
     footer: {
         flexDirection: 'row',
-        padding: 16,
+        padding: 20,
         borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
-        backgroundColor: '#fff',
+        borderTopColor: '#f1f5f9',
+        backgroundColor: '#ffffff',
     },
     cancelButton: {
         flex: 1,
-        marginRight: 8,
-        paddingVertical: 14,
-        borderRadius: 8,
+        marginRight: 10,
+        paddingVertical: 16,
+        borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#e2e8f0',
         alignItems: 'center',
+        backgroundColor: '#f8fafc',
     },
     cancelButtonText: {
         fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
+        fontWeight: '700',
+        color: '#64748b',
     },
     submitButton: {
         flex: 1,
-        marginLeft: 8,
-        paddingVertical: 14,
-        borderRadius: 8,
-        backgroundColor: '#8B5CF6',
+        marginLeft: 10,
+        paddingVertical: 16,
+        borderRadius: 14,
+        backgroundColor: '#10b981',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     submitButtonDisabled: {
-        opacity: 0.6,
+        backgroundColor: '#94a3b8',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     submitButtonText: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '800',
         color: '#fff',
-        marginLeft: 6,
+        marginLeft: 8,
     },
 });

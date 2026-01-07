@@ -18,12 +18,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 
 const { width } = Dimensions.get('window');
 
 export default function ServiceRequestsScreen() {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [requests, setRequests] = useState([]);
@@ -241,54 +243,64 @@ export default function ServiceRequestsScreen() {
       onPress={() => viewRequestDetails(item)}
       activeOpacity={0.7}
     >
-      <View style={styles.requestHeader}>
-        <View style={styles.requestTitleContainer}>
-          <Text style={styles.requestTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.requestNumber}>#{item.request_number}</Text>
+      <View style={styles.requestCardContent}>
+        <View style={styles.requestHeader}>
+          <View style={styles.requestTitleContainer}>
+            <Text style={styles.requestTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={styles.requestNumber}>#{item.request_number}</Text>
+          </View>
+          <LinearGradient
+            colors={ServiceRequestUtils.getStatusColors(item.status)}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.statusBadgeGradient}
+          >
+            <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+          </LinearGradient>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: ServiceRequestUtils.getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-        </View>
-      </View>
       
-      {item.description && (
-        <Text style={styles.requestDescription} numberOfLines={2}>{item.description}</Text>
-      )}
-      
-      <View style={styles.requestDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>
-            {ServiceRequestUtils.formatDate(item.preferred_date)} • {item.preferred_time_slot}
-          </Text>
-        </View>
-        
-        {item.estimated_weight && (
+        <View style={styles.requestDetails}>
+          <View style={styles.statusIndicator(item.status)} />
           <View style={styles.detailRow}>
-            <Ionicons name="cube-outline" size={16} color="#666" />
+            <View style={styles.detailIconBg}>
+              <Ionicons name="calendar-outline" size={14} color="#10b981" />
+            </View>
             <Text style={styles.detailText}>
-              {item.estimated_weight}kg{item.estimated_bags && ` • ${item.estimated_bags} bags`}
+              {ServiceRequestUtils.formatDate(item.preferred_date)} • {item.preferred_time_slot}
             </Text>
           </View>
-        )}
-      </View>
+          
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconBg}>
+              <Ionicons name="location-outline" size={14} color="#10b981" />
+            </View>
+            <Text style={styles.detailText} numberOfLines={1}>
+              {item.street_address}, {item.city}
+            </Text>
+          </View>
+        </View>
 
-      <View style={styles.requestActions}>
-        <Text style={styles.createdDate}>
-          Created {ServiceRequestUtils.formatDate(item.created_at)}
-        </Text>
-        
-        {ServiceRequestUtils.canCancelRequest(item.status) && (
-          <TouchableOpacity
-            style={styles.cancelButtonSmall}
-            onPress={(e) => {
-              e.stopPropagation();
-              cancelServiceRequest(item.id, item.title);
-            }}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.requestFooter}>
+          <View style={styles.serviceTypeBadge}>
+            <Ionicons name="layers-outline" size={12} color="#64748b" style={{ marginRight: 4 }} />
+            <Text style={styles.serviceTypeText}>{item.service_type_name}</Text>
+          </View>
+          
+          <View style={styles.footerActions}>
+            {ServiceRequestUtils.canCancelRequest(item.status) && (
+              <TouchableOpacity
+                style={styles.cancelBtnIcon}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  cancelServiceRequest(item.id, item.title);
+                }}
+              >
+                <Ionicons name="trash-outline" size={18} color="#ef4444" />
+              </TouchableOpacity>
+            )}
+            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -316,21 +328,32 @@ export default function ServiceRequestsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Service Requests</Text>
-        <TouchableOpacity style={styles.newRequestButton} onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" size={20} color="white" />
-          <Text style={styles.newRequestButtonText}>New Request</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <LinearGradient
+        colors={['#10b981', '#059669']}
+        style={[styles.mainHeader, { paddingTop: insets.top }]}
+      >
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.headerTitle}>Service Requests</Text>
+            <Text style={styles.headerSubtitle}>{requests.length} total requests</Text>
+          </View>
+          <TouchableOpacity style={styles.headerFab} onPress={() => setShowCreateModal(true)}>
+            <Ionicons name="add" size={28} color="#10b981" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       <FlatList
         data={requests}
         renderItem={renderServiceRequest}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[styles.listContainer, requests.length === 0 && styles.emptyListContainer]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} colors={['#8B5CF6']} />}
+        contentContainerStyle={[
+          styles.listContainer, 
+          requests.length === 0 && styles.emptyListContainer,
+          { paddingBottom: insets.bottom + 120 }
+        ]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} colors={['#10b981']} tintColor="#10b981" />}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
       />
@@ -350,77 +373,83 @@ export default function ServiceRequestsScreen() {
             </View>
 
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Service Type *</Text>
-                <View style={[styles.pickerContainer, formErrors.serviceTypeId && styles.inputError]}>
-                  <Picker selectedValue={requestForm.serviceTypeId} onValueChange={(value) => setRequestForm({...requestForm, serviceTypeId: value})} style={styles.picker}>
-                    <Picker.Item label="Select service type..." value="" />
-                    {serviceTypes.map((type) => (
-                      <Picker.Item key={type.id} label={`${type.name}${type.base_price ? ` - $${type.base_price}` : ''}`} value={String(type.id)} />
-                    ))}
-                  </Picker>
-                </View>
-                {formErrors.serviceTypeId && <Text style={styles.errorText}>{formErrors.serviceTypeId}</Text>}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Service Address *</Text>
-                <View style={[styles.pickerContainer, formErrors.addressId && styles.inputError]}>
-                  <Picker selectedValue={requestForm.addressId} onValueChange={(value) => setRequestForm({...requestForm, addressId: value})} style={styles.picker}>
-                    <Picker.Item label="Select address..." value="" />
-                    {addresses.map((address) => (
-                      <Picker.Item key={address.id} label={`${address.street_address}, ${address.city}`} value={String(address.id)} />
-                    ))}
-                  </Picker>
-                </View>
-                {formErrors.addressId && <Text style={styles.errorText}>{formErrors.addressId}</Text>}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Title *</Text>
-                <TextInput style={[styles.input, formErrors.title && styles.inputError]} value={requestForm.title} onChangeText={(text) => setRequestForm({...requestForm, title: text})} placeholder="Brief title for your request" maxLength={255} />
-                {formErrors.title && <Text style={styles.errorText}>{formErrors.title}</Text>}
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Description</Text>
-                <TextInput style={[styles.input, styles.textArea]} value={requestForm.description} onChangeText={(text) => setRequestForm({...requestForm, description: text})} placeholder="Describe your service request..." multiline numberOfLines={4} textAlignVertical="top" />
-              </View>
-
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Preferred Date *</Text>
-                  <TextInput style={[styles.input, formErrors.preferredDate && styles.inputError]} value={requestForm.preferredDate} onChangeText={(text) => setRequestForm({...requestForm, preferredDate: text})} placeholder="YYYY-MM-DD" />
-                  {formErrors.preferredDate && <Text style={styles.errorText}>{formErrors.preferredDate}</Text>}
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Time Slot</Text>
-                  <View style={styles.pickerContainer}>
-                    <Picker selectedValue={requestForm.preferredTimeSlot} onValueChange={(value) => setRequestForm({...requestForm, preferredTimeSlot: value})} style={styles.picker}>
-                      <Picker.Item label="Morning" value="morning" />
-                      <Picker.Item label="Afternoon" value="afternoon" />
-                      <Picker.Item label="Evening" value="evening" />
+              <View style={styles.formCard}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Service Type *</Text>
+                  <View style={[styles.pickerContainer, formErrors.serviceTypeId && styles.inputError]}>
+                    <Picker selectedValue={requestForm.serviceTypeId} onValueChange={(value) => setRequestForm({...requestForm, serviceTypeId: value})} style={styles.picker}>
+                      <Picker.Item label="Select service type..." value="" />
+                      {serviceTypes.map((type) => (
+                        <Picker.Item key={type.id} label={`${type.name}${type.base_price ? ` - $${type.base_price}` : ''}`} value={String(type.id)} />
+                      ))}
                     </Picker>
                   </View>
+                  {formErrors.serviceTypeId && <Text style={styles.errorText}>{formErrors.serviceTypeId}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Service Address *</Text>
+                  <View style={[styles.pickerContainer, formErrors.addressId && styles.inputError]}>
+                    <Picker selectedValue={requestForm.addressId} onValueChange={(value) => setRequestForm({...requestForm, addressId: value})} style={styles.picker}>
+                      <Picker.Item label="Select address..." value="" />
+                      {addresses.map((address) => (
+                        <Picker.Item key={address.id} label={`${address.street_address}, ${address.city}`} value={String(address.id)} />
+                      ))}
+                    </Picker>
+                  </View>
+                  {formErrors.addressId && <Text style={styles.errorText}>{formErrors.addressId}</Text>}
                 </View>
               </View>
 
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Weight (kg)</Text>
-                  <TextInput style={[styles.input, formErrors.estimatedWeight && styles.inputError]} value={requestForm.estimatedWeight} onChangeText={(text) => setRequestForm({...requestForm, estimatedWeight: text})} placeholder="0.0" keyboardType="numeric" />
-                  {formErrors.estimatedWeight && <Text style={styles.errorText}>{formErrors.estimatedWeight}</Text>}
+              <View style={styles.formCard}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Title *</Text>
+                  <TextInput style={[styles.input, formErrors.title && styles.inputError]} value={requestForm.title} onChangeText={(text) => setRequestForm({...requestForm, title: text})} placeholder="Brief title for your request" maxLength={255} />
+                  {formErrors.title && <Text style={styles.errorText}>{formErrors.title}</Text>}
                 </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Bags</Text>
-                  <TextInput style={[styles.input, formErrors.estimatedBags && styles.inputError]} value={requestForm.estimatedBags} onChangeText={(text) => setRequestForm({...requestForm, estimatedBags: text})} placeholder="0" keyboardType="numeric" />
-                  {formErrors.estimatedBags && <Text style={styles.errorText}>{formErrors.estimatedBags}</Text>}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Description</Text>
+                  <TextInput style={[styles.input, styles.textArea]} value={requestForm.description} onChangeText={(text) => setRequestForm({...requestForm, description: text})} placeholder="Describe your service request..." multiline numberOfLines={4} textAlignVertical="top" />
                 </View>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Special Instructions</Text>
-                <TextInput style={[styles.input, styles.textArea]} value={requestForm.specialInstructions} onChangeText={(text) => setRequestForm({...requestForm, specialInstructions: text})} placeholder="Any special instructions..." multiline numberOfLines={3} textAlignVertical="top" />
+              <View style={styles.formCard}>
+                <View style={styles.row}>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>Preferred Date *</Text>
+                    <TextInput style={[styles.input, formErrors.preferredDate && styles.inputError]} value={requestForm.preferredDate} onChangeText={(text) => setRequestForm({...requestForm, preferredDate: text})} placeholder="YYYY-MM-DD" />
+                    {formErrors.preferredDate && <Text style={styles.errorText}>{formErrors.preferredDate}</Text>}
+                  </View>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>Time Slot</Text>
+                    <View style={styles.pickerContainer}>
+                      <Picker selectedValue={requestForm.preferredTimeSlot} onValueChange={(value) => setRequestForm({...requestForm, preferredTimeSlot: value})} style={styles.picker}>
+                        <Picker.Item label="Morning" value="morning" />
+                        <Picker.Item label="Afternoon" value="afternoon" />
+                        <Picker.Item label="Evening" value="evening" />
+                      </Picker>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>Weight (kg)</Text>
+                    <TextInput style={[styles.input, formErrors.estimatedWeight && styles.inputError]} value={requestForm.estimatedWeight} onChangeText={(text) => setRequestForm({...requestForm, estimatedWeight: text})} placeholder="0.0" keyboardType="numeric" />
+                    {formErrors.estimatedWeight && <Text style={styles.errorText}>{formErrors.estimatedWeight}</Text>}
+                  </View>
+                  <View style={[styles.inputGroup, styles.halfWidth]}>
+                    <Text style={styles.label}>Bags</Text>
+                    <TextInput style={[styles.input, formErrors.estimatedBags && styles.inputError]} value={requestForm.estimatedBags} onChangeText={(text) => setRequestForm({...requestForm, estimatedBags: text})} placeholder="0" keyboardType="numeric" />
+                    {formErrors.estimatedBags && <Text style={styles.errorText}>{formErrors.estimatedBags}</Text>}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Special Instructions</Text>
+                  <TextInput style={[styles.input, styles.textArea]} value={requestForm.specialInstructions} onChangeText={(text) => setRequestForm({...requestForm, specialInstructions: text})} placeholder="Any special instructions..." multiline numberOfLines={3} textAlignVertical="top" />
+                </View>
               </View>
               <View style={styles.bottomSpacing} />
             </ScrollView>
@@ -444,12 +473,19 @@ export default function ServiceRequestsScreen() {
               <View>
                 <View style={styles.detailCard}>
                   <View style={styles.detailHeader}>
-                    <Text style={styles.detailTitle}>{selectedRequest.title}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: ServiceRequestUtils.getStatusColor(selectedRequest.status) }]}>
-                      <Text style={styles.statusText}>{selectedRequest.status.toUpperCase()}</Text>
+                    <View style={styles.requestTitleContainer}>
+                      <Text style={styles.detailTitle}>{selectedRequest.title}</Text>
+                      <Text style={styles.requestNumber}>#{selectedRequest.request_number}</Text>
                     </View>
+                    <LinearGradient
+                      colors={ServiceRequestUtils.getStatusColors(selectedRequest.status)}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.statusBadgeGradient}
+                    >
+                      <Text style={styles.statusText}>{selectedRequest.status.toUpperCase()}</Text>
+                    </LinearGradient>
                   </View>
-                  <Text style={styles.requestNumber}>#{selectedRequest.request_number}</Text>
                 </View>
 
                 {selectedRequest.description && (
@@ -462,45 +498,39 @@ export default function ServiceRequestsScreen() {
                 <View style={styles.detailCard}>
                   <Text style={styles.sectionTitle}>Service Details</Text>
                   <View style={styles.infoRow}>
+                    <Ionicons name="pricetag-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
                     <Text style={styles.infoLabel}>Service Type:</Text>
                     <Text style={styles.infoValue}>{selectedRequest.service_type_name}</Text>
                   </View>
                   <View style={styles.infoRow}>
+                    <Ionicons name="flag-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
                     <Text style={styles.infoLabel}>Priority:</Text>
                     <Text style={styles.infoValue}>{selectedRequest.priority}</Text>
                   </View>
-                  {selectedRequest.base_price && (
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Base Price:</Text>
-                      <Text style={styles.infoValue}>${selectedRequest.base_price}</Text>
-                    </View>
-                  )}
-                  {selectedRequest.quoted_price && (
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Quoted Price:</Text>
-                      <Text style={styles.infoValue}>${selectedRequest.quoted_price}</Text>
-                    </View>
-                  )}
-                  {selectedRequest.final_price && (
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Final Price:</Text>
-                      <Text style={styles.infoValue}>${selectedRequest.final_price}</Text>
-                    </View>
-                  )}
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Preferred Date:</Text>
+                    <Ionicons name="calendar-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
+                    <Text style={styles.infoLabel}>Date & Time:</Text>
                     <Text style={styles.infoValue}>{ServiceRequestUtils.formatDate(selectedRequest.preferred_date)} • {selectedRequest.preferred_time_slot}</Text>
                   </View>
-                  {selectedRequest.estimated_weight && (
+                  {(selectedRequest.estimated_weight || selectedRequest.estimated_bags) && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Weight:</Text>
-                      <Text style={styles.infoValue}>{selectedRequest.estimated_weight} kg</Text>
+                      <Ionicons name="cube-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
+                      <Text style={styles.infoLabel}>Load Est.:</Text>
+                      <Text style={styles.infoValue}>
+                        {[
+                          selectedRequest.estimated_weight ? `${selectedRequest.estimated_weight}kg` : null,
+                          selectedRequest.estimated_bags ? `${selectedRequest.estimated_bags} bags` : null
+                        ].filter(Boolean).join(' • ')}
+                      </Text>
                     </View>
                   )}
-                  {selectedRequest.estimated_bags && (
+                  {(selectedRequest.base_price || selectedRequest.quoted_price || selectedRequest.final_price) && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Bags:</Text>
-                      <Text style={styles.infoValue}>{selectedRequest.estimated_bags}</Text>
+                      <Ionicons name="cash-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
+                      <Text style={styles.infoLabel}>Pricing:</Text>
+                      <Text style={styles.infoValue}>
+                        ${selectedRequest.final_price || selectedRequest.quoted_price || selectedRequest.base_price}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -536,16 +566,30 @@ export default function ServiceRequestsScreen() {
 
                 {existingFeedback ? (
                   <View style={styles.detailCard}>
-                    <Text style={styles.sectionTitle}>Your Feedback</Text>
-                    <View style={styles.ratingContainer}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Ionicons key={star} name={star <= existingFeedback.rating ? "star" : "star-outline"} size={24} color="#FFB800" />
-                      ))}
+                    <View style={styles.sectionHeaderRow}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={20} color="#10b981" />
+                      <Text style={styles.sectionTitle}>Your Feedback</Text>
                     </View>
-                    <Text style={styles.sectionContent}>{existingFeedback.comment}</Text>
-                    <Text style={styles.feedbackDate}>
-                      Submitted on {ServiceRequestUtils.formatDate(existingFeedback.created_at)}
-                    </Text>
+                    <View style={styles.feedbackShowcase}>
+                      <View style={[styles.statusIndicator('approved'), { width: 3 }]} />
+                      <View style={styles.ratingStarsRow}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Ionicons 
+                            key={star} 
+                            name={star <= existingFeedback.rating ? "star" : "star-outline"} 
+                            size={18} 
+                            color="#f59e0b" 
+                          />
+                        ))}
+                        <Text style={styles.ratingValueText}>{existingFeedback.rating}.0</Text>
+                      </View>
+                      <View style={styles.feedbackCommentBox}>
+                        <Text style={styles.feedbackCommentText}>"{existingFeedback.comment}"</Text>
+                      </View>
+                      <Text style={styles.feedbackDateText}>
+                        Submitted {ServiceRequestUtils.formatDate(existingFeedback.created_at)}
+                      </Text>
+                    </View>
                   </View>
                 ) : selectedRequest.status === 'completed' && (
                   <TouchableOpacity style={styles.feedbackButton} onPress={() => setShowFeedbackModal(true)}>
@@ -579,21 +623,61 @@ export default function ServiceRequestsScreen() {
           </View>
 
           <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Rating (1-5) *</Text>
-              <View style={styles.ratingSelector}>
+            <View style={styles.feedbackIntro}>
+              <View style={styles.feedbackIconCircle}>
+                <Ionicons name="star" size={32} color="#10b981" />
+              </View>
+              <Text style={styles.feedbackMainTitle}>Rate Your Experience</Text>
+              <Text style={styles.feedbackSubtitle}>How was the waste collection service for this request?</Text>
+            </View>
+
+            <View style={styles.feedbackFormCard}>
+              <Text style={styles.feedbackLabel}>Overal Rating</Text>
+              <View style={styles.starSelectionRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} onPress={() => setFeedback({...feedback, rating: String(star)})}>
-                    <Ionicons name={feedback.rating >= star ? "star" : "star-outline"} size={40} color="#FFB800" style={styles.star} />
+                  <TouchableOpacity 
+                    key={star} 
+                    onPress={() => setFeedback({ ...feedback, rating: star })}
+                    style={styles.starTouch}
+                  >
+                    <Ionicons 
+                      name={star <= feedback.rating ? "star" : "star-outline"} 
+                      size={40} 
+                      color={star <= feedback.rating ? "#f59e0b" : "#cbd5e1"} 
+                    />
                   </TouchableOpacity>
                 ))}
               </View>
+
+              <Text style={styles.feedbackLabel}>Your Comments</Text>
+              <TextInput
+                style={styles.feedbackInput}
+                value={feedback.comment}
+                onChangeText={(text) => setFeedback({ ...feedback, comment: text })}
+                placeholder="Share your thoughts about the service..."
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Comment *</Text>
-              <TextInput style={[styles.input, styles.textArea]} value={feedback.comment} onChangeText={(text) => setFeedback({...feedback, comment: text})} placeholder="Share your experience..." multiline numberOfLines={6} textAlignVertical="top" />
-            </View>
+            <TouchableOpacity
+              style={[
+                styles.submitFeedbackBtn,
+                (!feedback.rating || feedback.submitting) && styles.btnDisabled
+              ]}
+              onPress={submitFeedback}
+              disabled={feedback.submitting || !feedback.rating}
+            >
+              {feedback.submitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Ionicons name="send" size={18} color="white" />
+                  <Text style={styles.submitFeedbackBtnText}>Submit Feedback</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -602,65 +686,343 @@ export default function ServiceRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, fontSize: 16, color: '#666' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  newRequestButton: { backgroundColor: '#8B5CF6', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginLeft: 12 },
-  newRequestButtonText: { color: 'white', fontSize: 14, fontWeight: '600', marginLeft: 4 },
-  listContainer: { padding: 16 },
+  loadingText: { marginTop: 16, fontSize: 16, color: '#64748b' },
+  mainHeader: {
+    paddingBottom: 25,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 25,
+    paddingTop: 15,
+  },
+  headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#ffffff' },
+  headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  headerFab: {
+    backgroundColor: '#ffffff',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  listContainer: { padding: 20 },
   emptyListContainer: { flexGrow: 1 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginTop: 16, marginBottom: 8 },
-  emptyText: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 30, paddingHorizontal: 40 },
-  primaryButton: { backgroundColor: '#8B5CF6', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
-  primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
-  requestCard: { backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 },
-  requestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  requestTitleContainer: { flex: 1, marginRight: 12 },
-  requestTitle: { fontSize: 18, fontWeight: '600', color: '#333', marginBottom: 4 },
-  requestNumber: { fontSize: 12, color: '#666', fontWeight: '500' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusText: { color: 'white', fontSize: 10, fontWeight: '600' },
-  requestDescription: { fontSize: 14, color: '#666', marginBottom: 16, lineHeight: 20 },
-  requestDetails: { marginBottom: 16 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  detailText: { fontSize: 14, color: '#333', marginLeft: 8, flex: 1 },
-  requestActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  createdDate: { fontSize: 12, color: '#999' },
-  cancelButtonSmall: { backgroundColor: '#FF3B30', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-  cancelButtonText: { color: 'white', fontSize: 12, fontWeight: '600' },
-  modalContainer: { flex: 1, backgroundColor: 'white' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
-  modalTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  modalAction: { color: '#666', fontSize: 16, fontWeight: '400' },
-  modalActionPrimary: { color: '#8B5CF6', fontSize: 16, fontWeight: '600' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1e293b', marginTop: 20 },
+  emptyText: { fontSize: 15, color: '#64748b', textAlign: 'center', marginVertical: 12, paddingHorizontal: 40, lineHeight: 22 },
+  primaryButton: { 
+    backgroundColor: '#10b981', 
+    paddingHorizontal: 28, 
+    paddingVertical: 14, 
+    borderRadius: 15,
+    elevation: 4,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  primaryButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  requestCard: { 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    marginBottom: 20, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 12, 
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    overflow: 'hidden',
+  },
+  requestCardContent: { padding: 20 },
+  requestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  requestTitleContainer: { flex: 1, marginRight: 10 },
+  requestTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b', marginBottom: 4 },
+  requestNumber: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  statusBadgeGradient: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  statusText: { color: 'white', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  statusIndicator: (status) => ({
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: ServiceRequestUtils.getStatusColor(status),
+  }),
+  requestDetails: { 
+    backgroundColor: '#f8fafc', 
+    padding: 16, 
+    borderRadius: 16, 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  detailIconBg: { 
+    width: 28, 
+    height: 28, 
+    borderRadius: 10, 
+    backgroundColor: '#ecfdf5', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginRight: 12 
+  },
+  detailText: { fontSize: 13, color: '#475569', fontWeight: '600' },
+  requestFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  serviceTypeBadge: { 
+    backgroundColor: '#f1f5f9', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  serviceTypeText: { fontSize: 11, color: '#64748b', fontWeight: '800' },
+  footerActions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  cancelBtnIcon: { padding: 5 },
+  modalContainer: { flex: 1, backgroundColor: '#f8fafc' },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 20, 
+    paddingVertical: 18, 
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f1f5f9' 
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
+  modalAction: { color: '#64748b', fontSize: 16, fontWeight: '500' },
+  modalActionPrimary: { color: '#10b981', fontSize: 16, fontWeight: '700' },
   modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, backgroundColor: 'white' },
-  inputError: { borderColor: '#FF3B30' },
+  formCard: { 
+    backgroundColor: '#ffffff', 
+    borderRadius: 20, 
+    padding: 20, 
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  inputGroup: { marginBottom: 18 },
+  label: { fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 8 },
+  input: { 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0', 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    fontSize: 15, 
+    backgroundColor: '#f8fafc',
+    color: '#1e293b'
+  },
+  inputError: { borderColor: '#ef4444' },
   textArea: { height: 100, textAlignVertical: 'top' },
-  pickerContainer: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, backgroundColor: 'white' },
+  pickerContainer: { 
+    borderWidth: 1, 
+    borderColor: '#e2e8f0', 
+    borderRadius: 12, 
+    backgroundColor: '#f8fafc',
+    overflow: 'hidden'
+  },
   picker: { height: 50 },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfWidth: { width: '48%' },
-  errorText: { color: '#FF3B30', fontSize: 12, marginTop: 4 },
-  bottomSpacing: { height: 40 },
-  detailCard: { backgroundColor: '#f9f9f9', borderRadius: 8, padding: 16, marginBottom: 16 },
-  detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  detailTitle: { fontSize: 20, fontWeight: '600', color: '#333', flex: 1, marginRight: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 8 },
-  sectionContent: { fontSize: 14, color: '#666', lineHeight: 20 },
-  infoRow: { flexDirection: 'row', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
-  infoLabel: { fontSize: 14, fontWeight: '500', color: '#666', width: 120 },
-  infoValue: { fontSize: 14, color: '#333', flex: 1 },
-  cancelButton: { backgroundColor: '#FF3B30', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  feedbackButton: { backgroundColor: '#8B5CF6', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 8, flexDirection: 'row', justifyContent: 'center' },
-  feedbackButtonText: { color: 'white', fontSize: 16, fontWeight: '600', marginLeft: 8 },
-  ratingContainer: { flexDirection: 'row', marginBottom: 12 },
-  ratingSelector: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12 },
-  star: { marginHorizontal: 4 },
-  feedbackDate: { fontSize: 12, color: '#999', marginTop: 8, fontStyle: 'italic' },
+  errorText: { color: '#ef4444', fontSize: 12, marginTop: 4, fontWeight: '500' },
+  bottomSpacing: { height: 60 },
+  detailCard: { 
+    backgroundColor: 'white', 
+    borderRadius: 20, 
+    padding: 20, 
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  detailTitle: { fontSize: 22, fontWeight: 'bold', color: '#1e293b', flex: 1, marginRight: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#334155', marginBottom: 12 },
+  sectionContent: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  infoRow: { 
+    flexDirection: 'row', 
+    paddingVertical: 10, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f1f5f9' 
+  },
+  infoLabel: { fontSize: 13, fontWeight: '600', color: '#64748b', width: 120 },
+  infoValue: { fontSize: 13, color: '#1e293b', flex: 1, fontWeight: '500' },
+  cancelButton: { 
+    backgroundColor: '#fef2f2', 
+    borderRadius: 12, 
+    paddingVertical: 15, 
+    alignItems: 'center', 
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#fee2e2'
+  },
+  cancelButtonText: { color: '#dc2626', fontSize: 16, fontWeight: 'bold' },
+  feedbackButton: { 
+    backgroundColor: '#10b981', 
+    borderRadius: 12, 
+    paddingVertical: 15, 
+    alignItems: 'center', 
+    marginTop: 8, 
+    flexDirection: 'row', 
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  feedbackButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  feedbackShowcase: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  ratingStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+    marginLeft: 6,
+  },
+  ratingValueText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginLeft: 8,
+  },
+  feedbackCommentBox: {
+    marginBottom: 12,
+    marginLeft: 6,
+  },
+  feedbackCommentText: {
+    fontSize: 15,
+    color: '#475569',
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  feedbackDateText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'right',
+    marginLeft: 6,
+    fontWeight: '600',
+  },
+  feedbackIntro: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  feedbackIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ecfdf5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  feedbackMainTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  feedbackSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  feedbackFormCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 24,
+  },
+  feedbackLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 12,
+  },
+  starSelectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  starTouch: {
+    padding: 4,
+  },
+  feedbackInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: '#1e293b',
+    minHeight: 120,
+  },
+  submitFeedbackBtn: {
+    backgroundColor: '#10b981',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 40,
+  },
+  submitFeedbackBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  btnDisabled: {
+    backgroundColor: '#94a3b8',
+    opacity: 0.7,
+  },
 });

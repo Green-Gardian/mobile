@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Alert, TextInput } from 'react-native';
+import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, Alert, TextInput, SafeAreaView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PerformanceTab from '../../components/PerformanceTab';
 import ProfileTab from '../../components/ProfileTab';
 import TasksTab from '../../components/TasksTab';
@@ -26,6 +28,7 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const socket = useSocket();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('overview');
 
   // Check if user is driver or resident
@@ -148,13 +151,14 @@ export default function HomeScreen() {
           id: driver.id,
           email: driver.email,
           phone: driver.phone_number,
+          profile_picture: driver.profile_picture,
           status: driver.status || 'active',
-          rating: 4.8, // Default rating since it's not in backend yet
-          totalCollections: 156, // Default since it's not in backend yet
-          todayCollections: 8, // Default since it's not in backend yet
-          workAreas: 2, // Default since it's not in backend yet
+          rating: 4.8,
+          totalCollections: 156,
+          todayCollections: 8,
+          workAreas: 2,
           vehicle: {
-            plateNo: 'ISB-2024', // Default since vehicle data needs separate API
+            plateNo: 'ISB-2024',
             model: 'Toyota Hilux',
             status: 'active'
           }
@@ -239,6 +243,13 @@ export default function HomeScreen() {
   const [residentLoading, setResidentLoading] = useState(isResident);
   const [residentProfile, setResidentProfile] = useState(null);
   const [residentRequests, setResidentRequests] = useState([]);
+  const [residentStats, setResidentStats] = useState({
+    totalRequests: 0,
+    activeRequests: 0,
+    completedRequests: 0,
+    userRating: '4.9'
+  });
+  const [nextCollection, setNextCollection] = useState(null);
   const [residentError, setResidentError] = useState(null);
 
   useEffect(() => {
@@ -254,16 +265,25 @@ export default function HomeScreen() {
       setResidentLoading(true);
       setResidentError(null);
 
-      const [profileResp, requestsResp] = await Promise.all([
+      const [profileResp, requestsResp, statsResp] = await Promise.all([
         ResidentAPI.getUserProfile(),
         ResidentAPI.getUserServiceRequests(),
+        ResidentAPI.getDashboardStats(),
       ]);
 
-      const normalizedProfile = Array.isArray(profileResp) ? profileResp[0] : (profileResp?.data || profileResp || null);
-      const normalizedRequests = Array.isArray(requestsResp) ? requestsResp : (requestsResp?.data || []);
+      const normalizedProfile = Array.isArray(profileResp) ? profileResp[0] : (profileResp?.data || profileResp?.profile || profileResp || null);
+      const normalizedRequests = Array.isArray(requestsResp) ? requestsResp : (requestsResp?.data || requestsResp?.serviceRequests || []);
+      const normalizedStats = statsResp?.stats || {
+        totalRequests: 0,
+        activeRequests: 0,
+        completedRequests: 0,
+        userRating: '4.9'
+      };
 
       setResidentProfile(normalizedProfile);
       setResidentRequests(normalizedRequests);
+      setResidentStats(normalizedStats);
+      setNextCollection(statsResp?.upcomingCollection || null);
     } catch (e) {
       console.error('Error loading resident data:', e);
       setResidentError('Failed to load dashboard');
@@ -337,7 +357,16 @@ export default function HomeScreen() {
             <View style={styles.welcomeContent}>
               <View style={styles.profileSection}>
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
+                  {driverData.profile_picture ? (
+                    <Image
+                      source={{ uri: driverData.profile_picture }}
+                      style={styles.avatarImage}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  ) : (
+                    <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
+                  )}
                 </View>
                 <View style={styles.profileInfo}>
                   <Text style={styles.welcomeText}>Welcome back!</Text>
@@ -446,121 +475,190 @@ export default function HomeScreen() {
     );
   };
 
-  const renderResidentOverview = () => (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.residentScrollContent}
-    >
-      {residentLoading ? (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
-        </View>
-      ) : residentError ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{residentError}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={loadResidentData}>
-            <Text style={styles.retryBtnText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Resident Dashboard</Text>
-            <TouchableOpacity style={styles.notificationBtn}>
-              <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
-            </TouchableOpacity>
-          </View>
+  const renderResidentOverview = () => {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+        <Header title="Resident Dashboard" isResident />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.residentScrollContent, { paddingBottom: insets.bottom + 40 }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={residentLoading}
+              onRefresh={loadResidentData}
+              colors={['#10b981']}
+              tintColor="#10b981"
+            />
+          }
+        >
+          {residentLoading && residentRequests.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading dashboard...</Text>
+            </View>
+          ) : residentError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{residentError}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={loadResidentData}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* Welcome Card */}
+              <View style={styles.welcomeCard}>
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  style={styles.welcomeGradient}
+                >
+                  <View style={styles.statusBadgeCorner}>
+                    <Text style={styles.statusText}>{(residentProfile?.status || 'Active').toUpperCase()}</Text>
+                  </View>
 
-          {/* Welcome Card */}
-          <View style={styles.welcomeCard}>
-            <LinearGradient
-              colors={['#10b981', '#34d399']}
-              style={styles.welcomeGradient}
-            >
-              {/* Status Badge - Top Right Corner */}
-              <View style={styles.statusBadgeCorner}>
-                <Text style={styles.statusText}>{(residentProfile?.status || 'active').toUpperCase()}</Text>
+                  <View style={styles.welcomeContent}>
+                    <View style={styles.profileSection}>
+                      <View style={styles.avatar}>
+                        {residentProfile?.profile_picture ? (
+                          <Image
+                            source={{ uri: residentProfile.profile_picture }}
+                            style={styles.avatarImage}
+                            contentFit="cover"
+                            transition={200}
+                          />
+                        ) : (
+                          <Text style={styles.avatarText}>
+                            {(residentProfile?.full_name || state.user?.username || 'R')
+                              .split(' ')
+                              .map(n => n[0])
+                              .join('')}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.profileInfo}>
+                        <Text style={styles.welcomeText}>Welcome back!</Text>
+                        <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
+                        <View style={styles.locationBadge}>
+                          <Ionicons name="location" size={12} color="rgba(255,255,255,0.8)" />
+                          <Text style={styles.locationText} numberOfLines={1}>
+                            {residentProfile?.area || residentProfile?.city || 'Location not set'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </LinearGradient>
               </View>
 
-              <View style={styles.welcomeContent}>
-                <View style={styles.profileSection}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{(residentProfile?.full_name || state.user?.username || 'R').split(' ').map(n => n[0]).join('')}</Text>
+              {/* Stats Cards */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconContainer, { backgroundColor: '#ecfdf5' }]}>
+                    <Ionicons name="list" size={20} color="#10b981" />
                   </View>
-                  <View style={styles.profileInfo}>
-                    <Text style={styles.welcomeText}>Welcome back!</Text>
-                    <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
-                    {!!residentProfile?.email && <Text style={styles.driverId}>{residentProfile.email}</Text>}
+                  <Text style={styles.statNumber}>{residentStats.totalRequests}</Text>
+                  <Text style={styles.statLabel}>Total Requests</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconContainer, { backgroundColor: '#fff7ed' }]}>
+                    <Ionicons name="time" size={20} color="#f59e0b" />
                   </View>
+                  <Text style={styles.statNumber}>
+                    {residentStats.activeRequests}
+                  </Text>
+                  <Text style={styles.statLabel}>Active</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconContainer, { backgroundColor: '#f0f9ff' }]}>
+                    <Ionicons name="checkmark-done" size={20} color="#0ea5e9" />
+                  </View>
+                  <Text style={styles.statNumber}>
+                    {residentStats.completedRequests}
+                  </Text>
+                  <Text style={styles.statLabel}>Completed</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <View style={[styles.statIconContainer, { backgroundColor: '#f5f3ff' }]}>
+                    <Ionicons name="chatbubble-ellipses" size={20} color="#8b5cf6" />
+                  </View>
+                  <Text style={styles.statNumber}>{residentStats.userRating}</Text>
+                  <Text style={styles.statLabel}>User Rating</Text>
                 </View>
               </View>
-            </LinearGradient>
-          </View>
 
-          {/* Stats Cards */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{residentRequests.length}</Text>
-              <Text style={styles.statLabel}>Total Requests</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'pending').length}</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{residentRequests.filter(r => (r.status || '').toLowerCase() === 'completed').length}</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="calendar-outline" size={24} color="#6d28d9" />
-              <Text style={styles.statLabel}>Next Collection</Text>
-            </View>
-          </View>
+              {/* Next Collection Info */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Upcoming Collection</Text>
+                {nextCollection ? (
+                  <View style={[styles.taskCard, { borderLeftWidth: 4, borderLeftColor: '#10b981' }]}>
+                    <View style={styles.taskHeader}>
+                      <Text style={styles.binId}>{nextCollection.title || 'Scheduled Pickup'}</Text>
+                      <View style={[styles.priorityBadge, { backgroundColor: '#10b981' }]}>
+                        <Text style={styles.priorityText}>{nextCollection.status.toUpperCase()}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.dateTimeContainer}>
+                      <Ionicons name="calendar-outline" size={16} color="#64748b" />
+                      <Text style={styles.taskLocation}>
+                        {ServiceRequestUtils.formatDateTime(nextCollection.scheduled_date || nextCollection.preferred_date)}
+                      </Text>
+                    </View>
+                    <View style={styles.taskFooter}>
+                      <Text style={styles.fillLevelText}>Service: {nextCollection.service_type_name || 'General'}</Text>
+                      <Text style={styles.estimatedTime}>Est. {nextCollection.estimated_weight || 0}kg</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.emptyTasksCard}>
+                    <Ionicons name="calendar-outline" size={32} color="#cbd5e1" />
+                    <Text style={styles.emptyTasksText}>No collections scheduled</Text>
+                    <TouchableOpacity 
+                      style={styles.requestSmallBtn}
+                      onPress={() => router.push('/service-requests')}
+                    >
+                      <Text style={styles.requestSmallBtnText}>Request Service</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
 
-          {/* Next Collection Info */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Next Collection</Text>
-            <View style={styles.taskCard}>
-              <View style={styles.taskHeader}>
-                <Text style={styles.binId}>Collection Scheduled</Text>
-                <View style={[styles.priorityBadge, { backgroundColor: '#10b981' }]}>
-                  <Text style={styles.priorityText}>CONFIRMED</Text>
+              {/* Quick Actions */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Quick Actions</Text>
+                <View style={styles.quickActionsContainer}>
+                  <TouchableOpacity 
+                    style={styles.quickActionButton}
+                    onPress={() => router.push('/service-requests')}
+                  >
+                    <View style={[styles.actionIconBg, { backgroundColor: '#f0fdf4' }]}>
+                      <Ionicons name="add-circle-outline" size={24} color="#10b981" />
+                    </View>
+                    <Text style={styles.quickActionText}>Request{"\n"}Service</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.quickActionButton}
+                    onPress={() => router.push('/profile')}
+                  >
+                    <View style={[styles.actionIconBg, { backgroundColor: '#eff6ff' }]}>
+                      <Ionicons name="map-outline" size={24} color="#3b82f6" />
+                    </View>
+                    <Text style={styles.quickActionText}>My{"\n"}Address</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.quickActionButton}
+                    onPress={() => router.push('/messages')}
+                  >
+                    <View style={[styles.actionIconBg, { backgroundColor: '#f5f3ff' }]}>
+                      <Ionicons name="chatbubbles-outline" size={24} color="#8b5cf6" />
+                    </View>
+                    <Text style={styles.quickActionText}>Help &{"\n"}Support</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-              <Text style={styles.taskLocation}>{ServiceRequestUtils.formatDateTime(
-                (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.scheduled_date) ||
-                (residentRequests.find(r => (r.status || '').toLowerCase() === 'approved')?.preferred_date)
-              ) || 'N/A'}</Text>
-              <View style={styles.taskFooter}>
-                <Text style={styles.fillLevelText}>Status: Scheduled</Text>
-                <Text style={styles.estimatedTime}>Regular pickup</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.quickActionsContainer}>
-              <TouchableOpacity style={styles.quickActionButton}>
-                <Ionicons name="call-outline" size={24} color="#6d28d9" />
-                <Text style={styles.quickActionText}>Request Service</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickActionButton}>
-                <Ionicons name="location-outline" size={24} color="#6d28d9" />
-                <Text style={styles.quickActionText}>Update Address</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.quickActionButton}>
-                <Ionicons name="chatbubble-outline" size={24} color="#6d28d9" />
-                <Text style={styles.quickActionText}>Contact Support</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </>
-      )}
-    </ScrollView>
-  );
+            </>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const renderContent = () => {
     // If no user is authenticated, don't render anything
@@ -582,7 +680,7 @@ export default function HomeScreen() {
       switch (activeTab) {
         case 'overview': return renderDriverOverview();
         case 'tasks': return <TasksTab />;
-        case 'workareas': return <WorkAreasTab />;
+        case 'workareas': return <WorkAreasTab tasks={currentTasks} />;
         case 'performance': return <PerformanceTab />;
         case 'profile': return <ProfileTab />;
         default: return renderDriverOverview();
@@ -597,10 +695,29 @@ export default function HomeScreen() {
     );
   };
 
+  const Header = ({ title, isResident }) => (
+    <View style={[styles.header, { borderBottomColor: isResident ? '#10b981' : '#e9d5ff' }]}>
+      <Text style={[styles.headerTitle, { color: isResident ? '#065f46' : '#4c1d95' }]}>{title}</Text>
+      <View style={styles.headerButtons}>
+        {isResident && (
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => router.push('/my-feedback')}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color="#10b981" />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={styles.headerBtn}>
+          <Ionicons name="notifications-outline" size={22} color={isResident ? '#10b981' : '#6d28d9'} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {/* Content */}
-      <View style={styles.content}>
+      <View style={[styles.content, { marginTop: insets.top }]}>
         {renderContent()}
       </View>
 
@@ -711,7 +828,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -798,7 +915,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 120, // Keep padding for driver internal tabs
   },
   residentScrollContent: {
     paddingBottom: 80, // Padding for main tab bar
@@ -838,9 +954,14 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#10b981',
+  },
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   profileInfo: {
     flex: 1,
@@ -1232,4 +1353,76 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    gap: 4
+  },
+  locationText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500'
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8
+  },
+  emptyTasksCard: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12
+  },
+  emptyTasksText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '500'
+  },
+  requestSmallBtn: {
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#10b981'
+  },
+  requestSmallBtnText: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '700'
+  },
+  actionIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2
+  }
 });

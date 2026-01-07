@@ -6,20 +6,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function MessagesScreen() {
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <Text style={styles.title}>Messages</Text>
       </View>
 
       {/* Coming Soon Content */}
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
         <View style={styles.iconContainer}>
-          <Ionicons name="chatbubbles-outline" size={80} color="#6d28d9" />
+          <Ionicons name="chatbubbles-outline" size={80} color="#10b981" />
         </View>
         
         <Text style={styles.comingSoonTitle}>Customer Support Chat</Text>
@@ -32,22 +33,22 @@ export default function MessagesScreen() {
 
         <View style={styles.featuresList}>
           <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#28A745" />
+            <Ionicons name="checkmark-circle-outline" size={20} color="#10b981" />
             <Text style={styles.featureText}>Real-time chat with support agents</Text>
           </View>
           
           <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#28A745" />
+            <Ionicons name="checkmark-circle-outline" size={20} color="#10b981" />
             <Text style={styles.featureText}>Message history for all your requests</Text>
           </View>
           
           <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#28A745" />
+            <Ionicons name="checkmark-circle-outline" size={20} color="#10b981" />
             <Text style={styles.featureText}>File and photo sharing</Text>
           </View>
           
           <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle-outline" size={20} color="#28A745" />
+            <Ionicons name="checkmark-circle-outline" size={20} color="#10b981" />
             <Text style={styles.featureText}>Quick responses and status updates</Text>
           </View>
         </View>
@@ -66,21 +67,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  header: { 
+    backgroundColor: 'white', 
+    paddingHorizontal: 20, 
+    paddingBottom: 16, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e2e8f0' 
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#065f46' },
   content: {
     flex: 1,
     alignItems: 'center',
@@ -100,7 +94,7 @@ const styles = StyleSheet.create({
   comingSoonSubtitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#6d28d9',
+    color: '#10b981',
     marginBottom: 30,
   },
   description: {
