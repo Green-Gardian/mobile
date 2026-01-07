@@ -61,5 +61,8 @@ export const DriverAPI = {
   completeTask: (taskId, data) => driverApi.put(`/tasks/${taskId}/complete`, data),
 
   // Get all bins for map
-  getBins: () => driverApi.get('/../bins'),
+  getBins: () => driverApi.get('/bins', { baseURL: API_BASE_URL }),
+
+  // Get dashboard stats
+  getDashboardStats: () => driverApi.get('/dashboard-stats'),
 };

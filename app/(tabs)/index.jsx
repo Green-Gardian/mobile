@@ -7,7 +7,6 @@ import { Dimensions, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpac
 import PerformanceTab from '../../components/PerformanceTab';
 import ProfileTab from '../../components/ProfileTab';
 import TasksTab from '../../components/TasksTab';
-import WorkAreasTab from '../../components/WorkAreasTab';
 import { useAuth } from '../../context/AuthContext';
 import { DriverAPI } from '../../services/driver';
 import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
@@ -159,6 +158,26 @@ export default function HomeScreen() {
             status: 'active'
           }
         });
+      }
+
+      // Load driver stats
+      try {
+        console.log('Calling DriverAPI.getDashboardStats()...');
+        const statsResponse = await DriverAPI.getDashboardStats();
+        console.log('Stats response:', statsResponse.data);
+        const stats = statsResponse.data.stats;
+
+        // Update driver data with dynamic stats
+        setDriverData(prev => ({
+          ...prev,
+          rating: stats.rating || 5.0,
+          totalCollections: stats.totalCollections || 0,
+          todayCollections: stats.todayCollections || 0,
+          // workAreas removed
+        }));
+      } catch (statsErr) {
+        console.error('Error loading dashboard stats:', statsErr);
+        // Fallback or keep defaults if needed, but better to show 0 or error state
       }
 
       // Load current tasks
@@ -364,8 +383,8 @@ export default function HomeScreen() {
             <Text style={styles.statLabel}>Rating</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.workAreas}</Text>
-            <Text style={styles.statLabel}>Work Areas</Text>
+            <Text style={styles.statNumber}>{driverData.rating}</Text>
+            <Text style={styles.statLabel}>Rating</Text>
           </View>
         </View>
 
@@ -582,7 +601,6 @@ export default function HomeScreen() {
       switch (activeTab) {
         case 'overview': return renderDriverOverview();
         case 'tasks': return <TasksTab />;
-        case 'workareas': return <WorkAreasTab />;
         case 'performance': return <PerformanceTab />;
         case 'profile': return <ProfileTab />;
         default: return renderDriverOverview();
@@ -610,7 +628,6 @@ export default function HomeScreen() {
           {[
             { key: 'overview', label: 'Overview', icon: 'analytics-outline' },
             { key: 'tasks', label: 'Tasks', icon: 'list-outline' },
-            { key: 'workareas', label: 'Areas', icon: 'map-outline' },
             { key: 'performance', label: 'Performance', icon: 'trending-up-outline' },
             { key: 'profile', label: 'Profile', icon: 'person-outline' }
           ].map((tab) => (
