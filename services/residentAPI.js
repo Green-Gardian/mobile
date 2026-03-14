@@ -105,6 +105,9 @@ export const ResidentAPI = {
       city: addressData.city,
       postalCode: addressData.postal_code || null,
       landmark: addressData.landmark || null,
+      latitude: typeof addressData.latitude === 'number' ? addressData.latitude : null,
+      longitude: typeof addressData.longitude === 'number' ? addressData.longitude : null,
+      isDefault: !!addressData.is_default,
     };
 
     return apiCall('/addresses', {
@@ -122,6 +125,9 @@ export const ResidentAPI = {
       city: addressData.city,
       postalCode: addressData.postal_code || null,
       landmark: addressData.landmark || null,
+      latitude: typeof addressData.latitude === 'number' ? addressData.latitude : null,
+      longitude: typeof addressData.longitude === 'number' ? addressData.longitude : null,
+      isDefault: !!addressData.is_default,
     };
 
     return apiCall(`/addresses/${addressId}`, {

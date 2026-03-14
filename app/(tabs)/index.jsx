@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PerformanceTab from '../../components/PerformanceTab';
 import ProfileTab from '../../components/ProfileTab';
 import TasksTab from '../../components/TasksTab';
+import WorkAreasTab from '../../components/WorkAreasTab';
 import { useAuth } from '../../context/AuthContext';
 import { DriverAPI } from '../../services/driver';
 import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
@@ -746,6 +747,7 @@ export default function HomeScreen() {
           {[
             { key: 'overview', label: 'Overview', icon: 'analytics-outline' },
             { key: 'tasks', label: 'Tasks', icon: 'list-outline' },
+            { key: 'workareas', label: 'Work Areas', icon: 'map-outline' },
             { key: 'performance', label: 'Performance', icon: 'trending-up-outline' },
             { key: 'profile', label: 'Profile', icon: 'person-outline' }
           ].map((tab) => (

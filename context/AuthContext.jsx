@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
           SecureStore.getItemAsync('gg_user_data'),
         ]);
         console.log('Loaded tokens:', { access: !!access, refresh: !!refresh, user: !!userData });
-        
+
         let user = null;
         if (userData) {
           try {
@@ -28,13 +28,13 @@ export const AuthProvider = ({ children }) => {
             console.log('Error parsing user data:', e);
           }
         }
-        
-        setState((s) => ({ 
-          ...s, 
-          accessToken: access, 
-          refreshToken: refresh, 
+
+        setState((s) => ({
+          ...s,
+          accessToken: access,
+          refreshToken: refresh,
           user: user,
-          loading: false 
+          loading: false
         }));
       } catch (error) {
         console.log('Error loading tokens:', error);
@@ -43,21 +43,21 @@ export const AuthProvider = ({ children }) => {
     })();
   }, []);
 
-  const signIn = useCallback(async (email, password) => {
-    const res = await AuthAPI.signIn(email, password);
+  const signIn = useCallback(async (email, password, totpCode) => {
+    const res = await AuthAPI.signIn(email, password, totpCode);
     const { access_token, refresh_token, username, role, is_verified } = res.data;
     const normalizedRole = String(role).toLowerCase();
     if (normalizedRole !== 'driver' && normalizedRole !== 'resident') {
       throw new Error('This app is available only for drivers and residents');
     }
     await saveTokens(access_token, refresh_token);
-    
+
     // Save user data to secure storage
     const userData = { username, role: normalizedRole, is_verified };
     await SecureStore.setItemAsync('gg_user_data', JSON.stringify(userData));
-    
+
     setState({ accessToken: access_token, refreshToken: refresh_token, user: userData, loading: false });
-    
+
     // Return success to indicate successful login
     return { success: true, user: userData };
   }, []);
@@ -66,12 +66,12 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = (await getRefreshToken()) || state.refreshToken || '';
       if (token) await AuthAPI.signOut(token);
-    } catch {}
+    } catch { }
     await clearTokens();
     // Clear user data from secure storage
     await SecureStore.deleteItemAsync('gg_user_data');
     setState({ accessToken: null, refreshToken: null, user: null, loading: false });
-    
+
     // Return success to indicate successful logout
     return { success: true };
   }, [state.refreshToken]);

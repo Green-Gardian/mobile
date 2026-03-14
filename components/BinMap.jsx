@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { DriverAPI } from '../services/driver';
 import { useSocket } from '../context/SocketContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -14,6 +15,7 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
     const [loading, setLoading] = useState(true);
     const mapRef = useRef(null);
     const socket = useSocket();
+    const insets = useSafeAreaInsets();
 
     // Identify the active task (the oldest non-completed task)
     const activeTask = [...(tasks || [])]
@@ -206,7 +208,7 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
 
             {/* Active Task Info Overlay */}
             {activeTask && (
-                <View style={styles.taskOverlay}>
+                <View style={[styles.taskOverlay, { bottom: (insets?.bottom || 0) + 140 }]}>
                     <View style={styles.taskOverlayHeader}>
                         <Ionicons name="navigate-circle" size={24} color="#6d28d9" />
                         <Text style={styles.taskOverlayTitle}>Current Target</Text>

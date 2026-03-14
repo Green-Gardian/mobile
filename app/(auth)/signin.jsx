@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import * as OTPAuth from 'otpauth';
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -23,7 +26,46 @@ export default function SignIn() {
       }
     } catch (e) {
       console.error('SignIn error:', e);
-      setError(e?.response?.data?.message || 'Unable to sign in');
+      if (e?.response?.data?.requiresMFA) {
+        try {
+          const authResult = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Unlock Green Guardian',
+            disableDeviceFallback: false,
+            cancelLabel: 'Cancel',
+          });
+
+          if (!authResult.success) {
+            setError('Biometric authentication failed or was cancelled.');
+            return;
+          }
+
+          const secretBase32 = await SecureStore.getItemAsync('gg_mfa_secret');
+          if (!secretBase32) {
+            setError('Biometric unlocking is enabled on your account, but this device does not have the secure token. Please contact an admin to reset MFA.');
+            return;
+          }
+
+          let totp = new OTPAuth.TOTP({
+            issuer: 'Green Guardian',
+            label: 'User',
+            algorithm: 'SHA1',
+            digits: 6,
+            period: 30,
+            secret: OTPAuth.Secret.fromBase32(secretBase32)
+          });
+
+          const generatedToken = totp.generate();
+          const resultRetry = await signIn(email.trim(), password, generatedToken);
+          if (resultRetry.success) {
+            router.replace('/(tabs)');
+          }
+        } catch (mfaErr) {
+          console.error('MFA SignIn error:', mfaErr);
+          setError(mfaErr?.response?.data?.message || 'Unable to sign in with Biometrics');
+        }
+      } else {
+        setError(e?.response?.data?.message || 'Unable to sign in');
+      }
     } finally {
       setLoading(false);
     }

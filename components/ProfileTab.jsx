@@ -1,10 +1,15 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useAuth } from '../context/AuthContext';
 import { DriverAPI } from '../services/driver';
+import { AuthAPI } from '../services/api';
+import * as SecureStore from 'expo-secure-store';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as OTPAuth from 'otpauth';
 
 export default function ProfileTab() {
   const { signOut, state } = useAuth();
@@ -31,13 +36,36 @@ export default function ProfileTab() {
   const [dobMonth, setDobMonth] = useState('');
   const [dobDay, setDobDay] = useState('');
 
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // MFA State
+  const [mfaStatus, setMfaStatus] = useState(null);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [processingMfa, setProcessingMfa] = useState(false);
+
   const years = Array.from({ length: 50 }, (_, i) => String(new Date().getFullYear() - i));
   const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
   const daysInSelectedMonth = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
   useEffect(() => {
     loadProfileData();
+    fetchMfaStatus();
   }, []);
+
+  const fetchMfaStatus = async () => {
+    try {
+      const response = await AuthAPI.getMFAStatus();
+      setMfaStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching MFA status:', error);
+    }
+  };
 
   const loadProfileData = async () => {
     try {
@@ -60,7 +88,7 @@ export default function ProfileTab() {
           joinDate: driver.created_at ? new Date(driver.created_at).toISOString().split('T')[0] : '2024-01-15'
         };
         setProfileData(nextProfile);
-        
+
         // Initialize DOB pickers
         const dob = String(nextProfile.date_of_birth || '');
         if (dob && /^\d{4}-\d{2}-\d{2}$/.test(dob)) {
@@ -91,7 +119,124 @@ export default function ProfileTab() {
   };
 
   const handleChangePassword = () => {
-    Alert.alert('Change Password', 'Password change functionality will be implemented with backend integration.');
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+    setShowPasswordModal(true);
+  };
+
+  const submitPasswordChange = async () => {
+    try {
+      const { currentPassword, newPassword, confirmNewPassword } = passwordForm;
+
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        Alert.alert('Validation Error', 'All fields are required');
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        Alert.alert('Validation Error', 'New passwords do not match');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        Alert.alert('Validation Error', 'Password must be at least 6 characters long');
+        return;
+      }
+
+      setChangingPassword(true);
+      await AuthAPI.changePassword(currentPassword, newPassword, confirmNewPassword);
+
+      Alert.alert('Success', 'Password changed successfully!');
+      setShowPasswordModal(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+    } catch (err) {
+      console.error('Error changing password:', err);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleToggleMfa = async () => {
+    if (mfaStatus?.mfaEnabled) {
+      if (!mfaStatus.canDisable) {
+        Alert.alert('Restricted', 'MFA cannot be disabled for your account role.');
+        return;
+      }
+
+      Alert.alert(
+        'Disable Two-Factor Authentication',
+        'Are you sure you want to disable biometric security? This will reduce your account security.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const authResult = await LocalAuthentication.authenticateAsync({
+                  promptMessage: 'Authenticate to disable Two-Factor Security',
+                });
+                if (!authResult.success) return;
+
+                setProcessingMfa(true);
+                await AuthAPI.disableMFA();
+                await SecureStore.deleteItemAsync('gg_mfa_secret');
+                Alert.alert('Success', 'Biometric Security has been disabled.');
+                fetchMfaStatus();
+              } catch (error) {
+                Alert.alert('Error', error.response?.data?.message || 'Failed to disable MFA');
+              } finally {
+                setProcessingMfa(false);
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!hasHardware || !isEnrolled) {
+          Alert.alert('Unsupported', 'Biometric authentication is not set up on this device. Please enable it in your phone settings first.');
+          return;
+        }
+
+        setProcessingMfa(true);
+        const response = await AuthAPI.generateMFASecret();
+        const secretBase32 = response.data.secret;
+
+        const authResult = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Authenticate to enable Two-Factor Security',
+          disableDeviceFallback: false,
+          cancelLabel: 'Cancel',
+        });
+
+        if (!authResult.success) {
+          setProcessingMfa(false);
+          return;
+        }
+
+        let totp = new OTPAuth.TOTP({
+          issuer: 'Green Guardian',
+          label: 'User',
+          algorithm: 'SHA1',
+          digits: 6,
+          period: 30,
+          secret: OTPAuth.Secret.fromBase32(secretBase32)
+        });
+
+        const generatedToken = totp.generate();
+        await AuthAPI.enableMFA(generatedToken);
+        await SecureStore.setItemAsync('gg_mfa_secret', secretBase32);
+
+        Alert.alert('Success', 'Biometric Security is now enabled!');
+        fetchMfaStatus();
+      } catch (error) {
+        Alert.alert('Error', error.response?.data?.message || 'Failed to enable Biometrics');
+      } finally {
+        setProcessingMfa(false);
+      }
+    }
   };
 
   const handleSignOut = () => {
@@ -100,9 +245,9 @@ export default function ProfileTab() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive', 
+        {
+          text: 'Sign Out',
+          style: 'destructive',
           onPress: async () => {
             try {
               const result = await signOut();
@@ -140,7 +285,7 @@ export default function ProfileTab() {
           <Ionicons name="person-outline" size={24} color="#6d28d9" />
           <Text style={styles.sectionTitle}>Profile Information</Text>
         </View>
-        
+
         {/* Read-only user info */}
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>Name</Text>
@@ -219,7 +364,7 @@ export default function ProfileTab() {
           <View style={styles.pickerContainer}>
             <Picker
               selectedValue={profileData.gender}
-              onValueChange={(value) => setProfileData({...profileData, gender: value})}
+              onValueChange={(value) => setProfileData({ ...profileData, gender: value })}
               style={styles.picker}
             >
               <Picker.Item label="Male" value="male" />
@@ -234,7 +379,7 @@ export default function ProfileTab() {
           <TextInput
             style={styles.input}
             value={profileData.emergency_contact_name}
-            onChangeText={(text) => setProfileData({...profileData, emergency_contact_name: text})}
+            onChangeText={(text) => setProfileData({ ...profileData, emergency_contact_name: text })}
             placeholder="Emergency contact name"
           />
         </View>
@@ -244,7 +389,7 @@ export default function ProfileTab() {
           <TextInput
             style={styles.input}
             value={profileData.emergency_contact_phone}
-            onChangeText={(text) => setProfileData({...profileData, emergency_contact_phone: text})}
+            onChangeText={(text) => setProfileData({ ...profileData, emergency_contact_phone: text })}
             placeholder="Emergency contact phone"
             keyboardType="phone-pad"
           />
@@ -255,15 +400,15 @@ export default function ProfileTab() {
           <TextInput
             style={styles.input}
             value={profileData.license_number}
-            onChangeText={(text) => setProfileData({...profileData, license_number: text})}
+            onChangeText={(text) => setProfileData({ ...profileData, license_number: text })}
             placeholder="License number"
           />
         </View>
 
         <View style={styles.divider} />
-        
+
         <View style={styles.rowButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.saveButton, saving && styles.buttonDisabled]}
             onPress={handleUpdateProfile}
             disabled={saving}
@@ -277,20 +422,7 @@ export default function ProfileTab() {
       {/* Account Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account Actions</Text>
-        
-        <TouchableOpacity style={styles.actionBtn} onPress={handleChangePassword}>
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="lock-closed-outline" size={24} color="#6d28d9" />
-            </View>
-            <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>Change Password</Text>
-              <Text style={styles.actionSubtitle}>Update your account password</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.actionBtn}>
           <View style={styles.actionContent}>
             <View style={styles.actionIconContainer}>
@@ -303,15 +435,15 @@ export default function ProfileTab() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionBtn}>
+
+        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPrivacyModal(true)}>
           <View style={styles.actionContent}>
             <View style={styles.actionIconContainer}>
               <Ionicons name="shield-checkmark-outline" size={24} color="#6d28d9" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Privacy & Security</Text>
-              <Text style={styles.actionSubtitle}>Manage your privacy settings</Text>
+              <Text style={styles.actionSubtitle}>Manage your security settings</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
@@ -321,8 +453,8 @@ export default function ProfileTab() {
       {/* Support */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.actionBtn}
           onPress={() => router.push('/feedback')}
         >
@@ -338,7 +470,7 @@ export default function ProfileTab() {
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.actionBtn}
           onPress={() => router.push('/my-feedback')}
         >
@@ -353,7 +485,7 @@ export default function ProfileTab() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.actionBtn}>
           <View style={styles.actionContent}>
             <View style={styles.actionIconContainer}>
@@ -366,7 +498,7 @@ export default function ProfileTab() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#64748b" />
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.actionBtn}>
           <View style={styles.actionContent}>
             <View style={styles.actionIconContainer}>
@@ -388,6 +520,155 @@ export default function ProfileTab() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Privacy & Security Modal */}
+      <Modal
+        visible={showPrivacyModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPrivacyModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1, backgroundColor: '#f8fafc' }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowPrivacyModal(false)}>
+              <Text style={styles.cancelButton}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Privacy & Security</Text>
+            <View style={{ width: 40 }} />
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleToggleMfa} disabled={processingMfa}>
+              <View style={styles.actionContent}>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name="finger-print-outline" size={24} color="#6d28d9" />
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text style={styles.actionTitle}>Two-Factor Auth {mfaStatus?.isRequired && '(Required)'}</Text>
+                  <Text style={styles.actionSubtitle}>
+                    {mfaStatus?.mfaEnabled ? 'Enabled - Tap to disable' : 'Disabled - Tap to enable'}
+                  </Text>
+                </View>
+              </View>
+              {processingMfa ? (
+                <ActivityIndicator size="small" color="#6d28d9" />
+              ) : (
+                <View style={[styles.mfaBadge, { backgroundColor: mfaStatus?.mfaEnabled ? '#dcfce7' : '#f1f5f9' }]}>
+                  <Text style={[styles.mfaBadgeText, { color: mfaStatus?.mfaEnabled ? '#166534' : '#64748b' }]}>
+                    {mfaStatus?.mfaEnabled ? 'ON' : 'OFF'}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => { setShowPrivacyModal(false); setTimeout(() => setShowPasswordModal(true), 300); }}>
+              <View style={styles.actionContent}>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name="lock-closed-outline" size={24} color="#6d28d9" />
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text style={styles.actionTitle}>Change Password</Text>
+                  <Text style={styles.actionSubtitle}>Update your password</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Privacy Policy', 'This will link to the company Privacy Policy.')}>
+              <View style={styles.actionContent}>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name="document-text-outline" size={24} color="#6d28d9" />
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text style={styles.actionTitle}>Privacy Policy</Text>
+                  <Text style={styles.actionSubtitle}>Read our data/privacy commitments</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Terms of Service', 'This will link to the company Terms of Service.')}>
+              <View style={styles.actionContent}>
+                <View style={styles.actionIconContainer}>
+                  <Ionicons name="newspaper-outline" size={24} color="#6d28d9" />
+                </View>
+                <View style={styles.actionTextContainer}>
+                  <Text style={styles.actionTitle}>Terms of Service</Text>
+                  <Text style={styles.actionSubtitle}>Review the usage terms and agreements</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+            </TouchableOpacity>
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Password Modal */}
+      <Modal
+        visible={showPasswordModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowPasswordModal(false)}>
+              <Text style={styles.cancelButton}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Change Password</Text>
+            <TouchableOpacity onPress={submitPasswordChange} disabled={changingPassword}>
+              {changingPassword ? (
+                <ActivityIndicator size="small" color="#6d28d9" />
+              ) : (
+                <Text style={styles.modalSaveButtonText}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Current Password *</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordForm.currentPassword}
+                onChangeText={(text) => setPasswordForm({ ...passwordForm, currentPassword: text })}
+                placeholder="Enter current password"
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>New Password *</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordForm.newPassword}
+                onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
+                placeholder="Enter new password (min 6 chars)"
+                secureTextEntry
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm New Password *</Text>
+              <TextInput
+                style={styles.input}
+                value={passwordForm.confirmNewPassword}
+                onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmNewPassword: text })}
+                placeholder="Confirm new password"
+                secureTextEntry
+              />
+            </View>
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
 
     </ScrollView>
   );
@@ -633,4 +914,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
   },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
+  cancelButton: { color: '#64748b', fontSize: 15 },
+  modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+  modalSaveButtonText: { color: '#6d28d9', fontSize: 16, fontWeight: '700' },
+  bottomSpacing: { height: 100 },
+  mfaBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  mfaBadgeText: { fontSize: 12, fontWeight: '700' },
+  qrContainer: { backgroundColor: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#f1f5f9' },
+  qrText: { fontSize: 14, color: '#334155', textAlign: 'center', lineHeight: 20 },
+  manualCodeText: { fontSize: 16, fontWeight: '700', color: '#6d28d9', textAlign: 'center', marginTop: 10, letterSpacing: 1 },
 });

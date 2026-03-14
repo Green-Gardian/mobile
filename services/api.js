@@ -96,7 +96,7 @@ api.interceptors.response.use(
 );
 
 export const AuthAPI = {
-  signIn: (email, password) => api.post('/auth/signin', { email, password }),
+  signIn: (email, password, totpCode) => api.post('/auth/signin', { email, password, totpCode }),
   signOut: (refresh_token) => api.post('/auth/signout', { refresh_token }),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email, client_type: 'mobile' }),
   resetPassword: (token, newPassword, confirmPassword) =>
@@ -116,6 +116,16 @@ export const AuthAPI = {
       password,
       confirmPassword,
     }),
+  changePassword: (currentPassword, newPassword, confirmNewPassword) =>
+    api.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+      confirmNewPassword
+    }),
+  getMFAStatus: () => api.get('/auth/mfa/status'),
+  generateMFASecret: () => api.post('/auth/mfa/generate-secret'),
+  enableMFA: (totpCode) => api.post('/auth/mfa/enable', { totpCode }),
+  disableMFA: () => api.post('/auth/mfa/disable'),
 };
 
 
