@@ -43,6 +43,29 @@ const apiCall = async (endpoint, options = {}) => {
 };
 
 export const ResidentAPI = {
+  // ===== MONTHLY DUES =====
+  getDuesStatus: async () => {
+    return apiCall('/dues/status');
+  },
+
+  getDuesHistory: async () => {
+    return apiCall('/dues/history');
+  },
+
+  createDuesCheckoutSession: async (returnUrl) => {
+    return apiCall('/dues/checkout-session', {
+      method: 'POST',
+      body: JSON.stringify({ returnUrl }),
+    });
+  },
+
+  verifyDuesCheckoutSession: async (sessionId) => {
+    return apiCall('/dues/verify-session', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+  },
+
   // ===== PROFILE MANAGEMENT =====
   getUserProfile: async () => {
     return apiCall('/profile');

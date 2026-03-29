@@ -19,6 +19,8 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 
@@ -37,6 +39,8 @@ export default function ServiceRequestsScreen() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedback, setFeedback] = useState({ rating: '', comment: '' });
   const [existingFeedback, setExistingFeedback] = useState(null);
+  const [duesStatus, setDuesStatus] = useState(null);
+  const [payingDues, setPayingDues] = useState(false);
 
   const [requestForm, setRequestForm] = useState({
     serviceTypeId: '',
@@ -59,15 +63,17 @@ export default function ServiceRequestsScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [requestsResponse, serviceTypesResponse, addressesResponse] = await Promise.all([
+      const [requestsResponse, serviceTypesResponse, addressesResponse, duesStatusResponse] = await Promise.all([
         ResidentAPI.getUserServiceRequests(),
         ResidentAPI.getServiceTypes(),
         ResidentAPI.getUserAddresses(),
+        ResidentAPI.getDuesStatus(),
       ]);
 
       setRequests(requestsResponse.serviceRequests || []);
       setServiceTypes(serviceTypesResponse.serviceTypes || []);
       setAddresses(addressesResponse.addresses || []);
+      setDuesStatus(duesStatusResponse?.dueStatus || null);
     } catch (error) {
       console.error('Error loading data:', error);
       Alert.alert('Error', 'Failed to load data. Please try again.');
@@ -103,6 +109,11 @@ export default function ServiceRequestsScreen() {
   };
 
   const createServiceRequest = async () => {
+    if (duesStatus && !duesStatus.canRequestSpecialCollection) {
+      Alert.alert('Payment Required', duesStatus.blockReason || 'Please pay monthly dues first to continue.');
+      return;
+    }
+
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors in the form');
       return;
@@ -237,6 +248,57 @@ export default function ServiceRequestsScreen() {
     setFormErrors({});
   };
 
+  const getDueStatusMeta = (status) => {
+    switch (status) {
+      case 'paid':
+        return { label: 'Paid', color: '#16a34a', bg: '#dcfce7' };
+      case 'overdue':
+        return { label: 'Overdue', color: '#dc2626', bg: '#fee2e2' };
+      case 'failed':
+        return { label: 'Failed', color: '#b45309', bg: '#fef3c7' };
+      default:
+        return { label: 'Pending', color: '#0369a1', bg: '#e0f2fe' };
+    }
+  };
+
+  const handlePayDues = async () => {
+    try {
+      setPayingDues(true);
+      const returnUrl = Linking.createURL('billing-return');
+      const session = await ResidentAPI.createDuesCheckoutSession(returnUrl);
+
+      const browserResult = await WebBrowser.openAuthSessionAsync(session.checkoutUrl, returnUrl);
+
+      let sessionId = session.checkoutSessionId;
+      if (browserResult.type === 'success' && browserResult.url) {
+        const parsed = Linking.parse(browserResult.url);
+        const parsedSessionId = parsed?.queryParams?.session_id
+          ? String(parsed.queryParams.session_id)
+          : null;
+        if (
+          parsedSessionId &&
+          parsedSessionId !== '{CHECKOUT_SESSION_ID}' &&
+          parsedSessionId.startsWith('cs_')
+        ) {
+          sessionId = parsedSessionId;
+        }
+      }
+
+      if (sessionId) {
+        const verify = await ResidentAPI.verifyDuesCheckoutSession(sessionId);
+        Alert.alert('Payment Status', verify.message || 'Payment status updated.');
+      } else {
+        Alert.alert('Payment Pending', 'Payment session closed. We could not verify a completed payment yet.');
+      }
+
+      await loadData();
+    } catch (error) {
+      Alert.alert('Payment Error', error.message || 'Failed to process monthly dues payment.');
+    } finally {
+      setPayingDues(false);
+    }
+  };
+
   const renderServiceRequest = ({ item }) => (
     <TouchableOpacity
       style={styles.requestCard}
@@ -310,7 +372,16 @@ export default function ServiceRequestsScreen() {
       <Ionicons name="document-text-outline" size={64} color="#ccc" />
       <Text style={styles.emptyTitle}>No Service Requests</Text>
       <Text style={styles.emptyText}>You haven't created any service requests yet.</Text>
-      <TouchableOpacity style={styles.primaryButton} onPress={() => setShowCreateModal(true)}>
+      <TouchableOpacity
+        style={[styles.primaryButton, duesStatus && !duesStatus.canRequestSpecialCollection && styles.disabledButton]}
+        onPress={() => {
+          if (duesStatus && !duesStatus.canRequestSpecialCollection) {
+            Alert.alert('Payment Required', duesStatus.blockReason || 'Please pay monthly dues to continue.');
+            return;
+          }
+          setShowCreateModal(true);
+        }}
+      >
         <Text style={styles.primaryButtonText}>Create Your First Request</Text>
       </TouchableOpacity>
     </View>
@@ -338,10 +409,51 @@ export default function ServiceRequestsScreen() {
             <Text style={styles.headerTitle}>Service Requests</Text>
             <Text style={styles.headerSubtitle}>{requests.length} total requests</Text>
           </View>
-          <TouchableOpacity style={styles.headerFab} onPress={() => setShowCreateModal(true)}>
+          <TouchableOpacity
+            style={[styles.headerFab, duesStatus && !duesStatus.canRequestSpecialCollection && styles.headerFabDisabled]}
+            onPress={() => {
+              if (duesStatus && !duesStatus.canRequestSpecialCollection) {
+                Alert.alert('Payment Required', duesStatus.blockReason || 'Please pay monthly dues to continue.');
+                return;
+              }
+              setShowCreateModal(true);
+            }}
+          >
             <Ionicons name="add" size={28} color="#10b981" />
           </TouchableOpacity>
         </View>
+
+        {duesStatus && (
+          <View style={styles.duesBanner}>
+            <View style={styles.duesBannerLeft}>
+              <Text style={styles.duesTitle}>Monthly Dues</Text>
+              <Text style={styles.duesAmount}>PKR {Number(duesStatus.amount || 500).toFixed(2)} • Due {ServiceRequestUtils.formatDate(duesStatus.dueDate)}</Text>
+              <View style={[styles.duesStatusPill, { backgroundColor: getDueStatusMeta(duesStatus.status).bg }]}> 
+                <Text style={[styles.duesStatusText, { color: getDueStatusMeta(duesStatus.status).color }]}> 
+                  {getDueStatusMeta(duesStatus.status).label}
+                </Text>
+              </View>
+              {!duesStatus.canRequestSpecialCollection && (
+                <Text style={styles.duesWarning}>
+                  {duesStatus.blockReason || 'Special collection is disabled until payment is completed.'}
+                </Text>
+              )}
+            </View>
+
+            {duesStatus.status !== 'paid' && (
+              <TouchableOpacity style={styles.duesPayButton} onPress={handlePayDues} disabled={payingDues}>
+                {payingDues ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Ionicons name="card-outline" size={16} color="#ffffff" />
+                    <Text style={styles.duesPayButtonText}>Pay Now</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </LinearGradient>
 
       <FlatList
@@ -721,6 +833,68 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  headerFabDisabled: {
+    opacity: 0.65,
+  },
+  duesBanner: {
+    marginHorizontal: 20,
+    marginTop: 14,
+    marginBottom: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    padding: 14,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  duesBannerLeft: {
+    flex: 1,
+  },
+  duesTitle: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  duesAmount: {
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  duesStatusPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginTop: 8,
+  },
+  duesStatusText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  duesWarning: {
+    color: '#fee2e2',
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
+  duesPayButton: {
+    alignSelf: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  duesPayButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
   listContainer: { padding: 20 },
   emptyListContainer: { flexGrow: 1 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
@@ -738,6 +912,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   primaryButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  disabledButton: {
+    opacity: 0.65,
+  },
   requestCard: { 
     backgroundColor: 'white', 
     borderRadius: 20, 
