@@ -51,6 +51,9 @@ function RouterStack() {
       ) : (
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       )}
+      <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="chat/list" options={{ headerShown: false }} />
+      <Stack.Screen name="payment-history" options={{ headerShown: false }} />
       <Stack.Screen
         name="feedback"
         options={{
