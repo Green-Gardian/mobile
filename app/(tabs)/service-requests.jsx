@@ -108,9 +108,25 @@ export default function ServiceRequestsScreen() {
     return Object.keys(errors).length === 0;
   };
 
+  const handleDuesBlockedAction = () => {
+    Alert.alert(
+      'Payment Required',
+      duesStatus?.blockReason ||
+        'You have an outstanding monthly dues balance. Please clear your bill before requesting a new service.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pay Now',
+          style: 'default',
+          onPress: handlePayDues,
+        },
+      ]
+    );
+  };
+
   const createServiceRequest = async () => {
     if (duesStatus && !duesStatus.canRequestSpecialCollection) {
-      Alert.alert('Payment Required', duesStatus.blockReason || 'Please pay monthly dues first to continue.');
+      handleDuesBlockedAction();
       return;
     }
 
@@ -376,7 +392,7 @@ export default function ServiceRequestsScreen() {
         style={[styles.primaryButton, duesStatus && !duesStatus.canRequestSpecialCollection && styles.disabledButton]}
         onPress={() => {
           if (duesStatus && !duesStatus.canRequestSpecialCollection) {
-            Alert.alert('Payment Required', duesStatus.blockReason || 'Please pay monthly dues to continue.');
+            handleDuesBlockedAction();
             return;
           }
           setShowCreateModal(true);
@@ -413,7 +429,7 @@ export default function ServiceRequestsScreen() {
             style={[styles.headerFab, duesStatus && !duesStatus.canRequestSpecialCollection && styles.headerFabDisabled]}
             onPress={() => {
               if (duesStatus && !duesStatus.canRequestSpecialCollection) {
-                Alert.alert('Payment Required', duesStatus.blockReason || 'Please pay monthly dues to continue.');
+                handleDuesBlockedAction();
                 return;
               }
               setShowCreateModal(true);

@@ -799,6 +799,23 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#64748b" />
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => router.push('/payment-history')}
+            id="profile-payment-history-btn"
+          >
+            <View style={styles.actionContent}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="receipt-outline" size={24} color="#10b981" />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Payment History</Text>
+                <Text style={styles.actionSubtitle}>View your monthly dues & billing records</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#64748b" />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.bottomSpacing} />

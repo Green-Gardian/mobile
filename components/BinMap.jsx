@@ -46,9 +46,8 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
             }
         })();
 
-        if (!tasks || tasks.length === 0) {
-            loadBins();
-        }
+        // Always load bins so they are visible alongside task markers
+        loadBins();
     }, [tasks?.length, activeTask?.id]);
 
     const fitToTask = (driverLoc, task) => {
@@ -117,25 +116,30 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
         }
     };
 
-    // Use tasks for markers if available, otherwise use all bins
-    const markersToRender = (tasks && tasks.length > 0)
-        ? tasks.map(t => ({
-            id: t.id,
-            latitude: t.location?.lat,
-            longitude: t.location?.lng,
-            name: t.bin_id,
-            fill_level: t.fill_level,
-            priority: t.priority,
-            status: t.status
-        }))
-        : bins.map(b => ({
-            id: b.id,
-            latitude: b.latitude,
-            longitude: b.longitude,
-            name: `Bin #${b.id}`,
-            fill_level: b.fill_level,
-            status: 'ok'
-        }));
+    // Always show all bins; task markers are rendered separately on top
+    const binMarkers = bins.map(b => ({
+        id: `bin-${b.id}`,
+        latitude: b.latitude,
+        longitude: b.longitude,
+        name: `Bin #${b.id}`,
+        fill_level: b.fill_level,
+        status: 'ok',
+        isTask: false,
+    }));
+
+    const taskMarkers = (tasks || []).map(t => ({
+        id: `task-${t.id}`,
+        taskId: t.id,
+        latitude: t.location?.lat,
+        longitude: t.location?.lng,
+        name: t.bin_id,
+        fill_level: t.fill_level,
+        priority: t.priority,
+        status: t.status,
+        isTask: true,
+    }));
+
+    const markersToRender = [...binMarkers, ...taskMarkers];
 
     const mapStyle = style ? style : { height: mapHeight || 300, width: '100%' };
 
@@ -158,34 +162,45 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
                     const lon = parseFloat(marker.longitude);
                     if (!lat || !lon) return null;
 
+                    // Task markers get purple; bin markers get fill-level color
+                    const isActive = activeTask && marker.isTask && activeTask.id === marker.taskId;
                     let color = 'green';
-                    if (marker.fill_level >= 90) color = 'red';
-                    else if (marker.fill_level >= 50) color = 'orange';
-
-                    const isActive = activeTask && activeTask.id === marker.id;
+                    if (marker.isTask) {
+                        color = isActive ? '#6d28d9' : '#8b5cf6';
+                    } else {
+                        if (marker.fill_level >= 90) color = '#ef4444';
+                        else if (marker.fill_level >= 50) color = '#f97316';
+                    }
 
                     return (
                         <Marker
                             key={marker.id}
                             coordinate={{ latitude: lat, longitude: lon }}
                             title={marker.name}
-                            description={`Fill: ${marker.fill_level}%${marker.status ? ` - ${marker.status.toUpperCase()}` : ''}`}
-                            pinColor={isActive ? '#6d28d9' : undefined}
+                            description={
+                                marker.isTask
+                                    ? `Task | Fill: ${marker.fill_level ?? 0}kg | ${marker.priority?.toUpperCase() ?? ''}`
+                                    : `Fill: ${marker.fill_level ?? 0}%${marker.status ? ` - ${marker.status.toUpperCase()}` : ''}`
+                            }
+                            zIndex={marker.isTask ? 10 : 1}
                         >
                             <View style={styles.markerContainer}>
                                 <View style={[
                                     styles.iconContainer,
                                     { backgroundColor: color },
-                                    isActive && { borderColor: '#6d28d9', borderWidth: 3 }
+                                    isActive && { borderColor: '#4c1d95', borderWidth: 3, transform: [{ scale: 1.2 }] },
+                                    marker.isTask && !isActive && { borderColor: '#a78bfa', borderWidth: 2 },
                                 ]}>
                                     <Ionicons
-                                        name={isActive ? "navigate" : "trash"}
+                                        name={marker.isTask ? (isActive ? 'navigate' : 'construct') : 'trash'}
                                         size={isActive ? 18 : 16}
                                         color="white"
                                     />
                                 </View>
-                                <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>{marker.fill_level}%</Text>
+                                <View style={[styles.badge, marker.isTask && { backgroundColor: '#ede9fe', borderColor: '#a78bfa' }]}>
+                                    <Text style={[styles.badgeText, marker.isTask && { color: '#6d28d9' }]}>
+                                        {marker.isTask ? `${marker.fill_level ?? 0}kg` : `${marker.fill_level ?? 0}%`}
+                                    </Text>
                                 </View>
                             </View>
                         </Marker>
@@ -229,26 +244,32 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
                     <TouchableOpacity style={styles.btn} onPress={centerOnUser}>
                         <Ionicons name="locate" size={24} color="#6d28d9" />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.btn} onPress={tasks.length > 0 ? () => { } : loadBins}>
+                    <TouchableOpacity style={styles.btn} onPress={loadBins}>
                         <Ionicons name="refresh" size={24} color="#6d28d9" />
                     </TouchableOpacity>
                 </View>
             )}
 
-            {!activeTask && showControls && (
+            {showControls && (
                 <View style={styles.legend}>
                     <View style={styles.legendItem}>
-                        <View style={[styles.dot, { backgroundColor: 'red' }]} />
-                        <Text style={styles.legendText}>Alert ({'>'}90%)</Text>
+                        <View style={[styles.dot, { backgroundColor: '#ef4444' }]} />
+                        <Text style={styles.legendText}>Alert (>90%)</Text>
                     </View>
                     <View style={styles.legendItem}>
-                        <View style={[styles.dot, { backgroundColor: 'orange' }]} />
-                        <Text style={styles.legendText}>Warn ({'>'}50%)</Text>
+                        <View style={[styles.dot, { backgroundColor: '#f97316' }]} />
+                        <Text style={styles.legendText}>Warn (>50%)</Text>
                     </View>
                     <View style={styles.legendItem}>
                         <View style={[styles.dot, { backgroundColor: 'green' }]} />
                         <Text style={styles.legendText}>OK</Text>
                     </View>
+                    {(tasks && tasks.length > 0) && (
+                        <View style={styles.legendItem}>
+                            <View style={[styles.dot, { backgroundColor: '#8b5cf6' }]} />
+                            <Text style={styles.legendText}>Request</Text>
+                        </View>
+                    )}
                 </View>
             )}
         </View>
