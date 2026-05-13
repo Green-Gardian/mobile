@@ -135,15 +135,15 @@ export default function HomeScreen() {
     // Listen for new service request assignments
     const handleServiceRequestAssigned = (data) => {
       console.log('📩 New service request assigned:', data);
-      
+
       // Add the new task to current tasks
       setCurrentTasks(prev => {
         // Check if task already exists
-        const exists = prev.some(task => 
-          task.id === data.serviceRequestId || 
+        const exists = prev.some(task =>
+          task.id === data.serviceRequestId ||
           task.service_request_id === data.serviceRequestId
         );
-        
+
         if (exists) {
           console.log('Task already exists, skipping...');
           return prev;
@@ -183,7 +183,7 @@ export default function HomeScreen() {
     // Listen for general task assignments (bin collections)
     const handleTaskAssigned = (data) => {
       console.log('📩 New task assigned:', data);
-      
+
       // Reload tasks to get the latest
       loadDriverData(true);
     };
@@ -561,7 +561,10 @@ export default function HomeScreen() {
                       </View>
                     </View>
                     <Text style={styles.taskLocationText} numberOfLines={1}>
-                      {task.location?.address || task.location || 'Location not available'}
+                      {task.location?.address ||
+                        (task.location?.lat && task.location?.lng
+                          ? `${task.location.lat.toFixed(4)}, ${task.location.lng.toFixed(4)}`
+                          : 'Location not available')}
                     </Text>
                     {task.estimated_time && (
                       <Text style={styles.taskDistanceText}>{task.estimated_time}</Text>
