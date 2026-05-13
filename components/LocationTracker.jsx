@@ -6,7 +6,7 @@ import { AppState, Alert } from 'react-native';
 
 export default function LocationTracker() {
     const { state } = useAuth();
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [subscription, setSubscription] = useState(null);
 
     useEffect(() => {

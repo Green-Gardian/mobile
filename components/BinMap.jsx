@@ -14,7 +14,7 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
     const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
     const mapRef = useRef(null);
-    const socket = useSocket();
+    const { socket } = useSocket();
     const insets = useSafeAreaInsets();
 
     // Identify the active task (the oldest non-completed task)

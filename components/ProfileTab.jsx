@@ -1,15 +1,23 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { DriverAPI } from '../services/driver';
 import { AuthAPI } from '../services/api';
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as OTPAuth from 'otpauth';
+
+const { width, height } = Dimensions.get('window');
+
+// Responsive sizing helpers
+const scale = (size) => (width / 375) * size;
+const verticalScale = (size) => (height / 812) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
 
 export default function ProfileTab() {
   const { signOut, state } = useAuth();
@@ -28,7 +36,8 @@ export default function ProfileTab() {
     license_number: '',
     id: '',
     status: 'active',
-    joinDate: '2024-01-15'
+    joinDate: '2024-01-15',
+    profile_picture: null
   });
 
   // DOB pickers state
@@ -85,7 +94,8 @@ export default function ProfileTab() {
           license_number: driver.license_number || '',
           id: driver.id || '',
           status: driver.status || 'active',
-          joinDate: driver.created_at ? new Date(driver.created_at).toISOString().split('T')[0] : '2024-01-15'
+          joinDate: driver.created_at ? new Date(driver.created_at).toISOString().split('T')[0] : '2024-01-15',
+          profile_picture: driver.profile_picture || null
         };
         setProfileData(nextProfile);
 
@@ -267,259 +277,304 @@ export default function ProfileTab() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#10b981" />
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} style={styles.container} contentContainerStyle={{ paddingBottom: 36 }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Driver Profile</Text>
-      </View>
+    <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: verticalScale(100) }}
+      >
+        {/* Modern Profile Header with Gradient */}
+        <LinearGradient
+          colors={['#10b981', '#059669']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.profileHeader}
+        >
+          <View style={styles.profileAvatarContainer}>
+            {profileData.profile_picture ? (
+              <Image
+                source={{ uri: profileData.profile_picture }}
+                style={styles.profileAvatar}
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <View style={styles.profileAvatarPlaceholder}>
+                <Text style={styles.profileAvatarText}>
+                  {profileData.first_name[0]}{profileData.last_name[0]}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.editAvatarButton}>
+              <Ionicons name="camera" size={18} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.profileName}>
+            {profileData.first_name} {profileData.last_name}
+          </Text>
+          <Text style={styles.profileRole}>Eco-Guardian Driver</Text>
+          <View style={styles.profileStatusBadge}>
+            <View style={styles.statusDot} />
+            <Text style={styles.profileStatus}>{profileData.status.toUpperCase()}</Text>
+          </View>
+        </LinearGradient>
 
-      {/* Profile Information */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="person-outline" size={24} color="#6d28d9" />
-          <Text style={styles.sectionTitle}>Profile Information</Text>
-        </View>
-
-        {/* Read-only user info */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Name</Text>
-          <Text style={styles.infoValue}>{profileData.first_name} {profileData.last_name}</Text>
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Email</Text>
-          <Text style={styles.infoValue}>{profileData.email}</Text>
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Phone</Text>
-          <Text style={styles.infoValue}>{profileData.phone_number}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* Editable fields */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Date of Birth</Text>
-          <View style={styles.dobRow}>
-            <View style={[styles.pickerContainer, styles.dobPicker]}>
-              <Picker
-                selectedValue={dobYear}
-                onValueChange={(value) => {
-                  setDobYear(value);
-                  const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
-                  setProfileData({ ...profileData, date_of_birth: newDob });
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Year" value="" />
-                {years.map((y) => (
-                  <Picker.Item key={y} label={y} value={y} />
-                ))}
-              </Picker>
-            </View>
-            <View style={[styles.pickerContainer, styles.dobPicker]}>
-              <Picker
-                selectedValue={dobMonth}
-                onValueChange={(value) => {
-                  setDobMonth(value);
-                  const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
-                  setProfileData({ ...profileData, date_of_birth: newDob });
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Mon" value="" />
-                {months.map((m) => (
-                  <Picker.Item key={m} label={m} value={m} />
-                ))}
-              </Picker>
-            </View>
-            <View style={[styles.pickerContainer, styles.dobPicker]}>
-              <Picker
-                selectedValue={dobDay}
-                onValueChange={(value) => {
-                  setDobDay(value);
-                  const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
-                  setProfileData({ ...profileData, date_of_birth: newDob });
-                }}
-                style={styles.picker}
-              >
-                <Picker.Item label="Day" value="" />
-                {daysInSelectedMonth.map((d) => (
-                  <Picker.Item key={d} label={d} value={d} />
-                ))}
-              </Picker>
-            </View>
+        {/* Quick Stats Cards */}
+        <View style={styles.quickStatsContainer}>
+          <View style={styles.quickStatCard}>
+            <Ionicons name="calendar-outline" size={24} color="#10b981" />
+            <Text style={styles.quickStatValue}>
+              {new Date(profileData.joinDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            </Text>
+            <Text style={styles.quickStatLabel}>Joined</Text>
+          </View>
+          <View style={styles.quickStatCard}>
+            <Ionicons name="shield-checkmark" size={24} color="#10b981" />
+            <Text style={styles.quickStatValue}>{mfaStatus?.mfaEnabled ? 'ON' : 'OFF'}</Text>
+            <Text style={styles.quickStatLabel}>2FA</Text>
+          </View>
+          <View style={styles.quickStatCard}>
+            <Ionicons name="card-outline" size={24} color="#10b981" />
+            <Text style={styles.quickStatValue}>{profileData.license_number ? 'Yes' : 'No'}</Text>
+            <Text style={styles.quickStatLabel}>License</Text>
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Gender</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={profileData.gender}
-              onValueChange={(value) => setProfileData({ ...profileData, gender: value })}
-              style={styles.picker}
-            >
-              <Picker.Item label="Male" value="male" />
-              <Picker.Item label="Female" value="female" />
-              <Picker.Item label="Other" value="other" />
-            </Picker>
+        {/* Personal Information Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="person-outline" size={22} color="#10b981" />
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Email</Text>
+            <Text style={styles.infoValue}>{profileData.email}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Phone</Text>
+            <Text style={styles.infoValue}>{profileData.phone_number}</Text>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Date of Birth</Text>
+            <View style={styles.dobRow}>
+              <View style={[styles.pickerContainer, styles.dobPicker]}>
+                <Picker
+                  selectedValue={dobYear}
+                  onValueChange={(value) => {
+                    setDobYear(value);
+                    const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
+                    setProfileData({ ...profileData, date_of_birth: newDob });
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Year" value="" />
+                  {years.map((y) => (
+                    <Picker.Item key={y} label={y} value={y} />
+                  ))}
+                </Picker>
+              </View>
+              <View style={[styles.pickerContainer, styles.dobPicker]}>
+                <Picker
+                  selectedValue={dobMonth}
+                  onValueChange={(value) => {
+                    setDobMonth(value);
+                    const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
+                    setProfileData({ ...profileData, date_of_birth: newDob });
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Mon" value="" />
+                  {months.map((m) => (
+                    <Picker.Item key={m} label={m} value={m} />
+                  ))}
+                </Picker>
+              </View>
+              <View style={[styles.pickerContainer, styles.dobPicker]}>
+                <Picker
+                  selectedValue={dobDay}
+                  onValueChange={(value) => {
+                    setDobDay(value);
+                    const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
+                    setProfileData({ ...profileData, date_of_birth: newDob });
+                  }}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Day" value="" />
+                  {daysInSelectedMonth.map((d) => (
+                    <Picker.Item key={d} label={d} value={d} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={profileData.gender}
+                onValueChange={(value) => setProfileData({ ...profileData, gender: value })}
+                style={styles.picker}
+              >
+                <Picker.Item label="Male" value="male" />
+                <Picker.Item label="Female" value="female" />
+                <Picker.Item label="Other" value="other" />
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>License Number</Text>
+            <TextInput
+              style={styles.input}
+              value={profileData.license_number}
+              onChangeText={(text) => setProfileData({ ...profileData, license_number: text })}
+              placeholder="Enter license number"
+              placeholderTextColor="#94a3b8"
+            />
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Emergency Contact Name</Text>
-          <TextInput
-            style={styles.input}
-            value={profileData.emergency_contact_name}
-            onChangeText={(text) => setProfileData({ ...profileData, emergency_contact_name: text })}
-            placeholder="Emergency contact name"
-          />
-        </View>
+        {/* Emergency Contact Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="call-outline" size={22} color="#10b981" />
+            <Text style={styles.sectionTitle}>Emergency Contact</Text>
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Emergency Contact Phone</Text>
-          <TextInput
-            style={styles.input}
-            value={profileData.emergency_contact_phone}
-            onChangeText={(text) => setProfileData({ ...profileData, emergency_contact_phone: text })}
-            placeholder="Emergency contact phone"
-            keyboardType="phone-pad"
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contact Name</Text>
+            <TextInput
+              style={styles.input}
+              value={profileData.emergency_contact_name}
+              onChangeText={(text) => setProfileData({ ...profileData, emergency_contact_name: text })}
+              placeholder="Emergency contact name"
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>License Number</Text>
-          <TextInput
-            style={styles.input}
-            value={profileData.license_number}
-            onChangeText={(text) => setProfileData({ ...profileData, license_number: text })}
-            placeholder="License number"
-          />
-        </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contact Phone</Text>
+            <TextInput
+              style={styles.input}
+              value={profileData.emergency_contact_phone}
+              onChangeText={(text) => setProfileData({ ...profileData, emergency_contact_phone: text })}
+              placeholder="Emergency contact phone"
+              keyboardType="phone-pad"
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.rowButtons}>
           <TouchableOpacity
             style={[styles.saveButton, saving && styles.buttonDisabled]}
             onPress={handleUpdateProfile}
             disabled={saving}
           >
-            <Ionicons name="save-outline" size={20} color="white" />
-            <Text style={styles.saveButtonText}>Update Profile</Text>
+            {saving ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Account Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Actions</Text>
-
-        <TouchableOpacity style={styles.actionBtn}>
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
-            </View>
-            <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>Notification Settings</Text>
-              <Text style={styles.actionSubtitle}>Manage your notification preferences</Text>
-            </View>
+        {/* Settings Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="settings-outline" size={22} color="#10b981" />
+            <Text style={styles.sectionTitle}>Settings</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPrivacyModal(true)}>
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="shield-checkmark-outline" size={24} color="#6d28d9" />
+          <TouchableOpacity style={styles.modernActionBtn} onPress={() => setShowPrivacyModal(true)}>
+            <View style={[styles.actionIconCircle, { backgroundColor: '#dcfce7' }]}>
+              <Ionicons name="shield-checkmark-outline" size={22} color="#10b981" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Privacy & Security</Text>
               <Text style={styles.actionSubtitle}>Manage your security settings</Text>
             </View>
+            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.modernActionBtn}>
+            <View style={[styles.actionIconCircle, { backgroundColor: '#dbeafe' }]}>
+              <Ionicons name="notifications-outline" size={22} color="#3b82f6" />
+            </View>
+            <View style={styles.actionTextContainer}>
+              <Text style={styles.actionTitle}>Notifications</Text>
+              <Text style={styles.actionSubtitle}>Manage notification preferences</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Support Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="help-circle-outline" size={22} color="#10b981" />
+            <Text style={styles.sectionTitle}>Support</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
-      </View>
 
-      {/* Support */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Support</Text>
-
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => router.push('/feedback')}
-        >
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6d28d9" />
+          <TouchableOpacity
+            style={styles.modernActionBtn}
+            onPress={() => router.push('/feedback')}
+          >
+            <View style={[styles.actionIconCircle, { backgroundColor: '#fef3c7' }]}>
+              <Ionicons name="chatbubble-ellipses-outline" size={22} color="#f59e0b" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Send Feedback</Text>
-              <Text style={styles.actionSubtitle}>Report bugs, request features, or share ideas</Text>
+              <Text style={styles.actionSubtitle}>Report bugs or share ideas</Text>
             </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => router.push('/my-feedback')}
-        >
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="list-outline" size={24} color="#6d28d9" />
+          <TouchableOpacity
+            style={styles.modernActionBtn}
+            onPress={() => router.push('/my-feedback')}
+          >
+            <View style={[styles.actionIconCircle, { backgroundColor: '#f3e8ff' }]}>
+              <Ionicons name="list-outline" size={22} color="#8b5cf6" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>My Feedback</Text>
-              <Text style={styles.actionSubtitle}>View your submitted feedback and responses</Text>
+              <Text style={styles.actionSubtitle}>View submitted feedback</Text>
             </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionBtn}>
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="help-circle-outline" size={24} color="#6d28d9" />
-            </View>
-            <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>Help & Support</Text>
-              <Text style={styles.actionSubtitle}>Get help with the app</Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionBtn}>
-          <View style={styles.actionContent}>
-            <View style={styles.actionIconContainer}>
-              <Ionicons name="call-outline" size={24} color="#6d28d9" />
+          <TouchableOpacity style={styles.modernActionBtn}>
+            <View style={[styles.actionIconCircle, { backgroundColor: '#fce7f3' }]}>
+              <Ionicons name="call-outline" size={22} color="#ec4899" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Contact Support</Text>
-              <Text style={styles.actionSubtitle}>Reach out to our support team</Text>
+              <Text style={styles.actionSubtitle}>Reach out to our team</Text>
             </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#64748b" />
-        </TouchableOpacity>
-      </View>
+            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+          </TouchableOpacity>
+        </View>
 
-      {/* Bottom Sign Out */}
-      <View style={{ marginHorizontal: 16, marginTop: 20, marginBottom: 32 }}>
-        <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-          <Ionicons name="log-out-outline" size={20} color="white" />
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Sign Out Button */}
+        <View style={styles.signOutContainer}>
+          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
+            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       {/* Privacy & Security Modal */}
       <Modal
@@ -534,27 +589,25 @@ export default function ProfileTab() {
         >
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowPrivacyModal(false)}>
-              <Text style={styles.cancelButton}>Close</Text>
+              <Ionicons name="close" size={24} color="#64748b" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Privacy & Security</Text>
-            <View style={{ width: 40 }} />
+            <View style={{ width: 24 }} />
           </View>
 
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            <TouchableOpacity style={styles.actionBtn} onPress={handleToggleMfa} disabled={processingMfa}>
-              <View style={styles.actionContent}>
-                <View style={styles.actionIconContainer}>
-                  <Ionicons name="finger-print-outline" size={24} color="#6d28d9" />
-                </View>
-                <View style={styles.actionTextContainer}>
-                  <Text style={styles.actionTitle}>Two-Factor Auth {mfaStatus?.isRequired && '(Required)'}</Text>
-                  <Text style={styles.actionSubtitle}>
-                    {mfaStatus?.mfaEnabled ? 'Enabled - Tap to disable' : 'Disabled - Tap to enable'}
-                  </Text>
-                </View>
+            <TouchableOpacity style={styles.modernActionBtn} onPress={handleToggleMfa} disabled={processingMfa}>
+              <View style={[styles.actionIconCircle, { backgroundColor: '#dcfce7' }]}>
+                <Ionicons name="finger-print-outline" size={22} color="#10b981" />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Two-Factor Auth {mfaStatus?.isRequired && '(Required)'}</Text>
+                <Text style={styles.actionSubtitle}>
+                  {mfaStatus?.mfaEnabled ? 'Enabled - Tap to disable' : 'Disabled - Tap to enable'}
+                </Text>
               </View>
               {processingMfa ? (
-                <ActivityIndicator size="small" color="#6d28d9" />
+                <ActivityIndicator size="small" color="#10b981" />
               ) : (
                 <View style={[styles.mfaBadge, { backgroundColor: mfaStatus?.mfaEnabled ? '#dcfce7' : '#f1f5f9' }]}>
                   <Text style={[styles.mfaBadgeText, { color: mfaStatus?.mfaEnabled ? '#166534' : '#64748b' }]}>
@@ -564,43 +617,37 @@ export default function ProfileTab() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={() => { setShowPrivacyModal(false); setTimeout(() => setShowPasswordModal(true), 300); }}>
-              <View style={styles.actionContent}>
-                <View style={styles.actionIconContainer}>
-                  <Ionicons name="lock-closed-outline" size={24} color="#6d28d9" />
-                </View>
-                <View style={styles.actionTextContainer}>
-                  <Text style={styles.actionTitle}>Change Password</Text>
-                  <Text style={styles.actionSubtitle}>Update your password</Text>
-                </View>
+            <TouchableOpacity style={styles.modernActionBtn} onPress={() => { setShowPrivacyModal(false); setTimeout(() => setShowPasswordModal(true), 300); }}>
+              <View style={[styles.actionIconCircle, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="lock-closed-outline" size={22} color="#3b82f6" />
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Change Password</Text>
+                <Text style={styles.actionSubtitle}>Update your password</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Privacy Policy', 'This will link to the company Privacy Policy.')}>
-              <View style={styles.actionContent}>
-                <View style={styles.actionIconContainer}>
-                  <Ionicons name="document-text-outline" size={24} color="#6d28d9" />
-                </View>
-                <View style={styles.actionTextContainer}>
-                  <Text style={styles.actionTitle}>Privacy Policy</Text>
-                  <Text style={styles.actionSubtitle}>Read our data/privacy commitments</Text>
-                </View>
+            <TouchableOpacity style={styles.modernActionBtn} onPress={() => Alert.alert('Privacy Policy', 'This will link to the company Privacy Policy.')}>
+              <View style={[styles.actionIconCircle, { backgroundColor: '#fef3c7' }]}>
+                <Ionicons name="document-text-outline" size={22} color="#f59e0b" />
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Privacy Policy</Text>
+                <Text style={styles.actionSubtitle}>Read our data commitments</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Terms of Service', 'This will link to the company Terms of Service.')}>
-              <View style={styles.actionContent}>
-                <View style={styles.actionIconContainer}>
-                  <Ionicons name="newspaper-outline" size={24} color="#6d28d9" />
-                </View>
-                <View style={styles.actionTextContainer}>
-                  <Text style={styles.actionTitle}>Terms of Service</Text>
-                  <Text style={styles.actionSubtitle}>Review the usage terms and agreements</Text>
-                </View>
+            <TouchableOpacity style={styles.modernActionBtn} onPress={() => Alert.alert('Terms of Service', 'This will link to the company Terms of Service.')}>
+              <View style={[styles.actionIconCircle, { backgroundColor: '#f3e8ff' }]}>
+                <Ionicons name="newspaper-outline" size={22} color="#8b5cf6" />
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+              <View style={styles.actionTextContainer}>
+                <Text style={styles.actionTitle}>Terms of Service</Text>
+                <Text style={styles.actionSubtitle}>Review usage terms</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
             </TouchableOpacity>
             <View style={styles.bottomSpacing} />
           </ScrollView>
@@ -615,17 +662,17 @@ export default function ProfileTab() {
         onRequestClose={() => setShowPasswordModal(false)}
       >
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: '#f8fafc' }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowPasswordModal(false)}>
-              <Text style={styles.cancelButton}>Cancel</Text>
+              <Ionicons name="close" size={24} color="#64748b" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Change Password</Text>
             <TouchableOpacity onPress={submitPasswordChange} disabled={changingPassword}>
               {changingPassword ? (
-                <ActivityIndicator size="small" color="#6d28d9" />
+                <ActivityIndicator size="small" color="#10b981" />
               ) : (
                 <Text style={styles.modalSaveButtonText}>Save</Text>
               )}
@@ -641,6 +688,7 @@ export default function ProfileTab() {
                 onChangeText={(text) => setPasswordForm({ ...passwordForm, currentPassword: text })}
                 placeholder="Enter current password"
                 secureTextEntry
+                placeholderTextColor="#94a3b8"
               />
             </View>
 
@@ -652,6 +700,7 @@ export default function ProfileTab() {
                 onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
                 placeholder="Enter new password (min 6 chars)"
                 secureTextEntry
+                placeholderTextColor="#94a3b8"
               />
             </View>
 
@@ -663,266 +712,332 @@ export default function ProfileTab() {
                 onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmNewPassword: text })}
                 placeholder="Confirm new password"
                 secureTextEntry
+                placeholderTextColor="#94a3b8"
               />
             </View>
             <View style={styles.bottomSpacing} />
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
-
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    backgroundColor: '#f8fafc',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: moderateScale(15),
     color: '#64748b',
+    marginTop: verticalScale(12),
   },
-  header: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+  // Modern Profile Header
+  profileHeader: {
+    paddingTop: verticalScale(40),
+    paddingBottom: verticalScale(32),
+    alignItems: 'center',
+    borderBottomLeftRadius: moderateScale(24),
+    borderBottomRightRadius: moderateScale(24),
   },
-  title: {
-    fontSize: 24,
+  profileAvatarContainer: {
+    position: 'relative',
+    marginBottom: verticalScale(16),
+  },
+  profileAvatar: {
+    width: moderateScale(100),
+    height: moderateScale(100),
+    borderRadius: moderateScale(50),
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  profileAvatarPlaceholder: {
+    width: moderateScale(100),
+    height: moderateScale(100),
+    borderRadius: moderateScale(50),
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  profileAvatarText: {
+    fontSize: moderateScale(36),
     fontWeight: 'bold',
-    color: '#333',
+    color: '#ffffff',
   },
-  section: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+  editAvatarButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    backgroundColor: '#059669',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#10b981',
   },
-  sectionHeader: {
+  profileName: {
+    fontSize: moderateScale(24),
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: verticalScale(4),
+  },
+  profileRole: {
+    fontSize: moderateScale(14),
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: verticalScale(12),
+  },
+  profileStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: moderateScale(16),
+    gap: moderateScale(6),
+  },
+  statusDot: {
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
+    backgroundColor: '#ffffff',
+  },
+  profileStatus: {
+    fontSize: moderateScale(11),
+    fontWeight: 'bold',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  // Quick Stats
+  quickStatsContainer: {
+    flexDirection: 'row',
+    marginHorizontal: moderateScale(20),
+    marginTop: verticalScale(-20),
+    marginBottom: verticalScale(20),
+    gap: moderateScale(12),
+  },
+  quickStatCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  quickStatValue: {
+    fontSize: moderateScale(16),
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginTop: verticalScale(8),
+    marginBottom: verticalScale(2),
+  },
+  quickStatLabel: {
+    fontSize: moderateScale(11),
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  // Section Styles
+  section: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: moderateScale(20),
+    marginBottom: verticalScale(16),
+    padding: moderateScale(20),
+    borderRadius: moderateScale(16),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: verticalScale(16),
+    gap: moderateScale(8),
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 12,
-    flex: 1,
+    fontSize: moderateScale(18),
+    fontWeight: 'bold',
+    color: '#1e293b',
   },
-  editText: {
-    fontSize: 14,
-    color: '#6d28d9',
-    fontWeight: '500',
-  },
-  infoCard: {
-    backgroundColor: '#ffffff',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
+  // Info Rows
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: verticalScale(12),
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   infoLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: moderateScale(14),
+    color: '#64748b',
+    fontWeight: '500',
   },
   infoValue: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    fontSize: moderateScale(14),
+    color: '#1e293b',
+    fontWeight: '600',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 16,
-  },
+  // Input Styles
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: verticalScale(8),
   },
   input: {
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: 'white',
+    borderColor: '#e2e8f0',
+    borderRadius: moderateScale(12),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(12),
+    fontSize: moderateScale(15),
+    color: '#1e293b',
   },
   dobRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: moderateScale(8),
   },
   dobPicker: {
     flex: 1,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: 'white',
+    borderColor: '#e2e8f0',
+    borderRadius: moderateScale(12),
+    backgroundColor: '#f8fafc',
+    overflow: 'hidden',
   },
   picker: {
-    height: 50,
+    height: verticalScale(50),
   },
-  rowButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  // Save Button
   saveButton: {
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#10b981',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 8,
-    flex: 1,
+    paddingVertical: verticalScale(14),
+    borderRadius: moderateScale(12),
+    marginTop: verticalScale(8),
+    gap: moderateScale(8),
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#94a3b8',
   },
   saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  signOutButton: {
-    backgroundColor: '#f3f4f6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-  },
-  signOutButtonText: {
-    color: '#6d28d9',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
     color: '#ffffff',
+    fontSize: moderateScale(15),
+    fontWeight: '600',
   },
-  saveBtn: {
-    backgroundColor: '#6d28d9',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveBtnText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#ffffff',
-  },
-  actionBtn: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+  // Modern Action Buttons
+  modernActionBtn: {
+    backgroundColor: '#f8fafc',
+    padding: moderateScale(16),
+    borderRadius: moderateScale(12),
+    marginBottom: verticalScale(12),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  actionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  actionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f8f5ff',
+  actionIconCircle: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(22),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: moderateScale(12),
   },
   actionTextContainer: {
     flex: 1,
   },
   actionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: moderateScale(15),
+    fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 2,
+    marginBottom: verticalScale(2),
   },
   actionSubtitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: '#64748b',
   },
+  // Sign Out
+  signOutContainer: {
+    marginHorizontal: moderateScale(20),
+    marginBottom: verticalScale(20),
+  },
   signOutBtn: {
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 0,
+    paddingVertical: verticalScale(16),
+    borderRadius: moderateScale(12),
+    borderWidth: 2,
+    borderColor: '#fee2e2',
+    gap: moderateScale(8),
   },
   signOutText: {
-    fontSize: 16,
+    fontSize: moderateScale(15),
     fontWeight: '600',
-    color: '#ffffff',
-    marginLeft: 8,
+    color: '#ef4444',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  // Modal Styles
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingHorizontal: moderateScale(20),
+    paddingVertical: verticalScale(16),
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
   },
-  loadingText: {
-    fontSize: 16,
-    color: '#64748b',
+  modalTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: 'bold',
+    color: '#1e293b',
   },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b' },
-  cancelButton: { color: '#64748b', fontSize: 15 },
-  modalContent: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-  modalSaveButtonText: { color: '#6d28d9', fontSize: 16, fontWeight: '700' },
-  bottomSpacing: { height: 100 },
-  mfaBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  mfaBadgeText: { fontSize: 12, fontWeight: '700' },
-  qrContainer: { backgroundColor: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#f1f5f9' },
-  qrText: { fontSize: 14, color: '#334155', textAlign: 'center', lineHeight: 20 },
-  manualCodeText: { fontSize: 16, fontWeight: '700', color: '#6d28d9', textAlign: 'center', marginTop: 10, letterSpacing: 1 },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: moderateScale(20),
+    paddingTop: verticalScale(20),
+  },
+  modalSaveButtonText: {
+    color: '#10b981',
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+  },
+  bottomSpacing: {
+    height: verticalScale(100),
+  },
+  mfaBadge: {
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
+  },
+  mfaBadgeText: {
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+  },
 });

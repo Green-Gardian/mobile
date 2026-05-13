@@ -24,7 +24,7 @@ export default function ChatRoomScreen() {
     const chatId = id;
     const insets = useSafeAreaInsets();
     const { state } = useAuth();
-    const socket = useSocket();
+    const { socket } = useSocket();
 
     const isDriver = state.user?.role === 'driver';
     const headerColors = isDriver ? ['#6d28d9', '#8b5cf6'] : ['#10b981', '#059669'];

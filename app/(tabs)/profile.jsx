@@ -1,6 +1,6 @@
 // app/(tabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import SelectPicker from '../../components/SelectPicker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import {
@@ -649,17 +649,15 @@ export default function ProfileScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Preferred Collection Time</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={profile.preferred_collection_time}
-                onValueChange={(value) => setProfile({ ...profile, preferred_collection_time: value })}
-                style={styles.picker}
-              >
-                <Picker.Item label="Morning (8 AM - 12 PM)" value="morning" />
-                <Picker.Item label="Afternoon (12 PM - 5 PM)" value="afternoon" />
-                <Picker.Item label="Evening (5 PM - 8 PM)" value="evening" />
-              </Picker>
-            </View>
+            <SelectPicker
+              selectedValue={profile.preferred_collection_time}
+              onValueChange={(value) => setProfile({ ...profile, preferred_collection_time: value })}
+              options={[
+                { label: 'Morning (8 AM - 12 PM)', value: 'morning' },
+                { label: 'Afternoon (12 PM - 5 PM)', value: 'afternoon' },
+                { label: 'Evening (5 PM - 8 PM)', value: 'evening' },
+              ]}
+            />
           </View>
 
           <View style={styles.inputGroup}>
@@ -938,17 +936,15 @@ export default function ProfileScreen() {
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Address Type</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={addressForm.address_type}
-                    onValueChange={(value) => setAddressForm({ ...addressForm, address_type: value })}
-                    style={styles.picker}
-                  >
-                    <Picker.Item label="Home" value="home" />
-                    <Picker.Item label="Office" value="office" />
-                    <Picker.Item label="Other" value="other" />
-                  </Picker>
-                </View>
+                <SelectPicker
+                  selectedValue={addressForm.address_type}
+                  onValueChange={(value) => setAddressForm({ ...addressForm, address_type: value })}
+                  options={[
+                    { label: 'Home', value: 'home' },
+                    { label: 'Office', value: 'office' },
+                    { label: 'Other', value: 'other' },
+                  ]}
+                />
               </View>
 
               <View style={styles.inputGroup}>
