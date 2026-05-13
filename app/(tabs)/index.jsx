@@ -16,7 +16,12 @@ import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 import { VehicleAPI } from '../../services/vehicle';
 import BinMap from '../../components/BinMap';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+
+// Responsive sizing helpers
+const scale = (size) => (width / 375) * size;
+const verticalScale = (size) => (height / 812) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
 
 import * as Location from 'expo-location';
 import { useSocket } from '../../context/SocketContext';
@@ -73,11 +78,17 @@ export default function HomeScreen() {
     };
 
     const sendLocation = (location) => {
-      if (socket && location && location.coords) {
-        socket.emit('driver:location_update', {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude
-        });
+      if (socket && socket.emit && location && location.coords) {
+        try {
+          socket.emit('driver:location_update', {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude
+          });
+        } catch (err) {
+          console.error('Error emitting location:', err);
+        }
+      } else {
+        console.log('Socket not ready for location update');
       }
     };
 
@@ -335,160 +346,234 @@ export default function HomeScreen() {
     return (
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: moderateScale(100) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#6d28d9']}
-            tintColor="#6d28d9"
+            colors={['#10b981']}
+            tintColor="#10b981"
           />
         }
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: (insets?.top || 0) + 12 }]}>
-          <Text style={styles.headerTitle}>Driver Dashboard</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.headerBtn}
-              onPress={() => router.push('/chat/list')}
-            >
-              <Ionicons name="chatbubbles-outline" size={24} color="#6d28d9" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerBtn}>
-              <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-
-
-        {/* Welcome Card */}
-        <View style={styles.welcomeCard}>
-          <LinearGradient
-            colors={['#6d28d9', '#8b5cf6']}
-            style={styles.welcomeGradient}
-          >
-            {/* ... rest of welcome card ... */}
-            {/* Status Badge - Top Right Corner */}
-            <View style={styles.statusBadgeCorner}>
-              <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
-            </View>
-
-            <View style={styles.welcomeContent}>
-              <View style={styles.profileSection}>
-                <View style={styles.avatar}>
-                  {driverData.profile_picture ? (
-                    <Image
-                      source={{ uri: driverData.profile_picture }}
-                      style={styles.avatarImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
-                  )}
-                </View>
-                <View style={styles.profileInfo}>
-                  <Text style={styles.welcomeText}>Welcome back!</Text>
-                  <Text style={styles.driverName}>{driverData.name}</Text>
-                  <Text style={styles.driverId}>ID: {driverData.id}</Text>
+        {/* Modern Header with Gradient */}
+        <LinearGradient
+          colors={['#10b981', '#059669']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.modernHeader, { paddingTop: (insets?.top || 0) + moderateScale(16) }]}
+        >
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <View style={styles.modernAvatar}>
+                {driverData.profile_picture ? (
+                  <Image
+                    source={{ uri: driverData.profile_picture }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {driverData.name.split(' ').map(n => n[0]).join('')}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.headerInfo}>
+                <Text style={styles.greetingText}>Welcome back,</Text>
+                <Text style={styles.driverNameHeader}>{driverData.name}</Text>
+                <View style={styles.statusBadgeInline}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusTextInline}>{driverData.status.toUpperCase()}</Text>
                 </View>
               </View>
             </View>
-          </LinearGradient>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.todayCollections}</Text>
-            <Text style={styles.statLabel}>Today Collections</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.totalCollections}</Text>
-            <Text style={styles.statLabel}>Total Collections</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-        </View>
-
-        {/* Current Tasks */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Current Tasks</Text>
-            <View style={styles.sectionHeaderRight}>
-              <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-                <Ionicons name="refresh-outline" size={20} color="#6d28d9" />
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => router.push('/chat/list')}
+              >
+                <Ionicons name="chatbubbles" size={moderateScale(22)} color="white" />
               </TouchableOpacity>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
+              <TouchableOpacity style={styles.iconButton}>
+                <Ionicons name="notifications" size={moderateScale(22)} color="white" />
               </TouchableOpacity>
             </View>
           </View>
-          {currentTasks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="checkmark-done-circle-outline" size={48} color="#cbd5e1" />
-              <Text style={styles.emptyStateText}>No active tasks</Text>
-              <Text style={styles.emptyStateSubtext}>Tasks will appear here when bins need collection</Text>
+
+          {/* Quick Stats in Header */}
+          <View style={styles.quickStatsRow}>
+            <View style={styles.quickStatItem}>
+              <Ionicons name="checkmark-circle" size={moderateScale(24)} color="white" />
+              <View style={styles.quickStatText}>
+                <Text style={styles.quickStatNumber}>{driverData.todayCollections}</Text>
+                <Text style={styles.quickStatLabel}>Today</Text>
+              </View>
             </View>
-          ) : (
-            currentTasks.map((task) => {
-              const isServiceRequest = task.task_type === 'service_request' || task.origin === 'service_request';
-              return (
-                <View key={task.id} style={styles.taskCard}>
-                  <View style={styles.taskHeader}>
-                    <Text style={styles.binId}>{isServiceRequest ? 'REQ' : 'BIN'}: {task.bin_id || task.binId}</Text>
-                    <View style={[styles.priorityBadge, { backgroundColor: isServiceRequest ? '#8b5cf6' : (task.priority === 'high' ? '#ef4444' : '#f59e0b') }]}>
-                      <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
-                  {isServiceRequest && task.title && <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{task.title}</Text>}
-                  <View style={styles.taskFooter}>
-                    <View style={styles.fillLevelContainer}>
-                      <Text style={styles.fillLevelText}>
-                        {isServiceRequest ? `Est. Weight: ${task.fill_level || 0}kg` : `Fill Level: ${task.fill_level || 0}%`}
-                      </Text>
-                      {!isServiceRequest && (
-                        <View style={styles.fillLevelBar}>
-                          <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
+            <View style={styles.quickStatDivider} />
+            <View style={styles.quickStatItem}>
+              <Ionicons name="trophy" size={moderateScale(24)} color="white" />
+              <View style={styles.quickStatText}>
+                <Text style={styles.quickStatNumber}>{driverData.totalCollections}</Text>
+                <Text style={styles.quickStatLabel}>Total</Text>
+              </View>
+            </View>
+            <View style={styles.quickStatDivider} />
+            <View style={styles.quickStatItem}>
+              <Ionicons name="star" size={moderateScale(24)} color="white" />
+              <View style={styles.quickStatText}>
+                <Text style={styles.quickStatNumber}>{driverData.rating}</Text>
+                <Text style={styles.quickStatLabel}>Rating</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* Main Content */}
+        <View style={styles.mainContent}>
+          {/* Today's Progress Card */}
+          <View style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <View>
+                <Text style={styles.progressTitle}>Today's Progress</Text>
+                <Text style={styles.progressSubtitle}>Keep up the great work!</Text>
+              </View>
+              <TouchableOpacity onPress={onRefresh} style={styles.refreshIconBtn}>
+                <Ionicons name="refresh" size={moderateScale(20)} color="#10b981" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.progressStats}>
+              <View style={styles.progressStatItem}>
+                <LinearGradient
+                  colors={['#10b981', '#059669']}
+                  style={styles.progressStatIcon}
+                >
+                  <Ionicons name="checkmark-done" size={moderateScale(24)} color="white" />
+                </LinearGradient>
+                <View style={styles.progressStatInfo}>
+                  <Text style={styles.progressStatValue}>{driverData.todayCollections}</Text>
+                  <Text style={styles.progressStatLabel}>Completed</Text>
+                </View>
+              </View>
+
+              <View style={styles.progressStatItem}>
+                <LinearGradient
+                  colors={['#f59e0b', '#d97706']}
+                  style={styles.progressStatIcon}
+                >
+                  <Ionicons name="time" size={moderateScale(24)} color="white" />
+                </LinearGradient>
+                <View style={styles.progressStatInfo}>
+                  <Text style={styles.progressStatValue}>{currentTasks.length}</Text>
+                  <Text style={styles.progressStatLabel}>Pending</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Current Tasks Section */}
+          <View style={styles.tasksSection}>
+            <View style={styles.tasksSectionHeader}>
+              <View>
+                <Text style={styles.tasksSectionTitle}>Current Tasks</Text>
+                <Text style={styles.tasksSectionSubtitle}>
+                  {currentTasks.length} {currentTasks.length === 1 ? 'task' : 'tasks'} assigned
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setActiveTab('tasks')}>
+                <Text style={styles.viewAllBtn}>View All →</Text>
+              </TouchableOpacity>
+            </View>
+
+            {currentTasks.length === 0 ? (
+              <View style={styles.emptyTasksCard}>
+                <LinearGradient
+                  colors={['#f0fdf4', '#dcfce7']}
+                  style={styles.emptyTasksGradient}
+                >
+                  <Ionicons name="checkmark-done-circle" size={moderateScale(64)} color="#10b981" />
+                  <Text style={styles.emptyTasksTitle}>All Caught Up!</Text>
+                  <Text style={styles.emptyTasksText}>
+                    No active tasks at the moment. New tasks will appear here.
+                  </Text>
+                </LinearGradient>
+              </View>
+            ) : (
+              currentTasks.slice(0, 3).map((task) => {
+                const isServiceRequest = task.task_type === 'service_request' || task.origin === 'service_request';
+                return (
+                  <View key={task.id} style={styles.modernTaskCard}>
+                    <View style={styles.taskCardLeft}>
+                      <View style={[styles.taskIconContainer, { backgroundColor: isServiceRequest ? '#f3e8ff' : '#f0fdf4' }]}>
+                        <Ionicons 
+                          name={isServiceRequest ? "document-text" : "trash"} 
+                          size={moderateScale(20)} 
+                          color={isServiceRequest ? '#8b5cf6' : '#10b981'} 
+                        />
+                      </View>
+                      <View style={styles.taskCardContent}>
+                        <View style={styles.taskCardHeader}>
+                          <Text style={styles.taskBinId} numberOfLines={1}>
+                            {isServiceRequest ? 'REQ' : 'Bin'} #{task.bin_id || task.binId}
+                          </Text>
+                          <View style={[styles.taskStatusBadge, {
+                            backgroundColor: task.priority === 'high' ? '#fef2f2' : '#fef9c3'
+                          }]}>
+                            <Text style={[styles.taskStatusText, {
+                              color: task.priority === 'high' ? '#dc2626' : '#ca8a04'
+                            }]}>
+                              {task.priority === 'high' ? 'URGENT' : 'NORMAL'}
+                            </Text>
+                          </View>
                         </View>
-                      )}
+                        <Text style={styles.taskLocationText} numberOfLines={1}>
+                          {task.location?.address || 
+                           (task.location?.lat && task.location?.lng 
+                             ? `${task.location.lat.toFixed(4)}, ${task.location.lng.toFixed(4)}` 
+                             : 'Location not available')}
+                        </Text>
+                        {task.estimated_time && (
+                          <Text style={styles.taskDistanceText}>{task.estimated_time}</Text>
+                        )}
+                      </View>
                     </View>
-                    <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
+                    <TouchableOpacity
+                      style={styles.taskNavigateButton}
+                      onPress={() => setCompletingTask(task)}
+                    >
+                      <Ionicons name="navigate" size={moderateScale(20)} color="#ffffff" />
+                    </TouchableOpacity>
                   </View>
+                );
+              })
+            )}
+          </View>
 
-                  {/* Complete Task Button */}
-                  <TouchableOpacity
-                    style={styles.completeTaskBtn}
-                    onPress={() => setCompletingTask(task)}
-                  >
-                    <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                    <Text style={styles.completeTaskBtnText}>Complete Task</Text>
-                  </TouchableOpacity>
+          {/* Vehicle Info Card */}
+          <View style={styles.vehicleSection}>
+            <Text style={styles.vehicleSectionTitle}>Assigned Vehicle</Text>
+            <LinearGradient
+              colors={['#1e293b', '#334155']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.modernVehicleCard}
+            >
+              <View style={styles.vehicleCardHeader}>
+                <View style={styles.vehicleIconContainer}>
+                  <Ionicons name="car-sport" size={moderateScale(32)} color="#10b981" />
                 </View>
-              );
-            })
-          )}
-        </View>
-
-        {/* Vehicle Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
-          <View style={styles.vehicleCard}>
-            <View style={styles.vehicleHeader}>
-              <Text style={styles.vehiclePlate}>{vehicleData?.plateNo || 'N/A'}</Text>
-              <View style={[styles.vehicleStatusBadge, { backgroundColor: '#10b981' }]}>
-                <Text style={styles.vehicleStatusText}>{(vehicleData?.status || 'active').toUpperCase()}</Text>
+                <View style={[styles.vehicleStatusBadge, { 
+                  backgroundColor: vehicleData?.status === 'active' ? '#10b981' : '#94a3b8' 
+                }]}>
+                  <Text style={styles.vehicleStatusText}>
+                    {(vehicleData?.status || 'active').toUpperCase()}
+                  </Text>
+                </View>
               </View>
-            </View>
-            <Text style={styles.vehicleModel}>{vehicleData?.model || 'Vehicle Model'}</Text>
+              <Text style={styles.vehiclePlateNumber}>{vehicleData?.plateNo || 'N/A'}</Text>
+              <Text style={styles.vehicleModel}>{vehicleData?.model || 'Vehicle Model'}</Text>
+            </LinearGradient>
           </View>
         </View>
       </ScrollView>
@@ -1433,3 +1518,342 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5',
   }
 });
+
+// Modern Driver Overview Styles - Appended
+const modernStyles = StyleSheet.create({
+  modernHeader: {
+    paddingHorizontal: moderateScale(20),
+    paddingBottom: moderateScale(24),
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: moderateScale(20),
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modernAvatar: {
+    width: moderateScale(56),
+    height: moderateScale(56),
+    borderRadius: moderateScale(28),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: moderateScale(12),
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: moderateScale(14),
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: moderateScale(2),
+  },
+  driverNameHeader: {
+    fontSize: moderateScale(20),
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: moderateScale(4),
+  },
+  statusBadgeInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(6),
+  },
+  statusDot: {
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
+    backgroundColor: '#10b981',
+  },
+  statusTextInline: {
+    fontSize: moderateScale(12),
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: moderateScale(8),
+  },
+  iconButton: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickStatsRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    justifyContent: 'space-around',
+  },
+  quickStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(10),
+  },
+  quickStatText: {
+    gap: moderateScale(2),
+  },
+  quickStatNumber: {
+    fontSize: moderateScale(20),
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  quickStatLabel: {
+    fontSize: moderateScale(11),
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  quickStatDivider: {
+    width: 1,
+    height: moderateScale(40),
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  mainContent: {
+    padding: moderateScale(16),
+    gap: moderateScale(16),
+  },
+  progressCard: {
+    backgroundColor: 'white',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(20),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: moderateScale(20),
+  },
+  progressTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  progressSubtitle: {
+    fontSize: moderateScale(13),
+    color: '#64748b',
+    marginTop: moderateScale(2),
+  },
+  refreshIconBtn: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressStats: {
+    flexDirection: 'row',
+    gap: moderateScale(16),
+  },
+  progressStatItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
+    backgroundColor: '#f8fafc',
+    padding: moderateScale(16),
+    borderRadius: moderateScale(12),
+  },
+  progressStatIcon: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressStatInfo: {
+    flex: 1,
+  },
+  progressStatValue: {
+    fontSize: moderateScale(24),
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  progressStatLabel: {
+    fontSize: moderateScale(12),
+    color: '#64748b',
+    marginTop: moderateScale(2),
+  },
+  tasksSection: {
+    gap: moderateScale(12),
+  },
+  tasksSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: moderateScale(4),
+  },
+  tasksSectionTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  tasksSectionSubtitle: {
+    fontSize: moderateScale(13),
+    color: '#64748b',
+    marginTop: moderateScale(2),
+  },
+  viewAllBtn: {
+    fontSize: moderateScale(14),
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  emptyTasksCard: {
+    backgroundColor: 'white',
+    borderRadius: moderateScale(16),
+    overflow: 'hidden',
+  },
+  emptyTasksGradient: {
+    padding: moderateScale(40),
+    alignItems: 'center',
+    gap: moderateScale(12),
+  },
+  emptyTasksTitle: {
+    fontSize: moderateScale(20),
+    fontWeight: 'bold',
+    color: '#10b981',
+  },
+  emptyTasksText: {
+    fontSize: moderateScale(14),
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: moderateScale(20),
+  },
+  modernTaskCard: {
+    backgroundColor: 'white',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginBottom: moderateScale(12),
+  },
+  taskCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: moderateScale(12),
+  },
+  taskIconContainer: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  taskCardContent: {
+    flex: 1,
+    gap: moderateScale(4),
+  },
+  taskCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: moderateScale(4),
+  },
+  taskBinId: {
+    fontSize: moderateScale(16),
+    fontWeight: 'bold',
+    color: '#1e293b',
+    flex: 1,
+  },
+  taskStatusBadge: {
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(4),
+    borderRadius: moderateScale(8),
+  },
+  taskStatusText: {
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+  },
+  taskLocationText: {
+    fontSize: moderateScale(13),
+    color: '#64748b',
+  },
+  taskDistanceText: {
+    fontSize: moderateScale(12),
+    color: '#94a3b8',
+  },
+  taskNavigateButton: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  vehicleSection: {
+    gap: moderateScale(12),
+  },
+  vehicleSectionTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  modernVehicleCard: {
+    borderRadius: moderateScale(16),
+    padding: moderateScale(20),
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  vehicleCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: moderateScale(16),
+  },
+  vehicleIconContainer: {
+    width: moderateScale(56),
+    height: moderateScale(56),
+    borderRadius: moderateScale(28),
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vehiclePlateNumber: {
+    fontSize: moderateScale(28),
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: moderateScale(8),
+  },
+  vehicleModel: {
+    fontSize: moderateScale(16),
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+});
+
+// Merge modern styles with existing styles
+Object.assign(styles, modernStyles);
