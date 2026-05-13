@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const { signOut, state } = useAuth();
   const navigation = useNavigation();
   const router = useRouter();
-  const socket = useSocket();
+  const { socket, isConnected } = useSocket();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('overview');
 

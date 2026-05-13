@@ -76,7 +76,20 @@ function RouterStack() {
 }
 
 import { SocketProvider } from '../context/SocketContext';
+import { NotificationProvider, useNotifications } from '../context/NotificationContext';
+import { NotificationContainer } from '../components/NotificationToast';
 import LocationTracker from '../components/LocationTracker';
+
+// Wrapper component to use notifications hook
+function AppContent() {
+  return (
+    <>
+      <LocationTracker />
+      <NotificationContainer />
+      <RouterStack />
+    </>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -85,8 +98,9 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <SocketProvider>
-          <LocationTracker />
-          <RouterStack />
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
         </SocketProvider>
       </AuthProvider>
       <StatusBar style="auto" />

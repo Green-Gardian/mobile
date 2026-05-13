@@ -1,6 +1,6 @@
 // app/(tabs)/service-requests.tsx
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import SelectPicker from '../../components/SelectPicker';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -517,27 +517,31 @@ export default function ServiceRequestsScreen() {
               <View style={styles.formCard}>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Service Type *</Text>
-                  <View style={[styles.pickerContainer, formErrors.serviceTypeId && styles.inputError]}>
-                    <Picker selectedValue={requestForm.serviceTypeId} onValueChange={(value) => setRequestForm({...requestForm, serviceTypeId: value})} style={styles.picker}>
-                      <Picker.Item label="Select service type..." value="" />
-                      {serviceTypes.map((type) => (
-                        <Picker.Item key={type.id} label={`${type.name}${type.base_price ? ` - $${type.base_price}` : ''}`} value={String(type.id)} />
-                      ))}
-                    </Picker>
-                  </View>
+                  <SelectPicker
+                    selectedValue={requestForm.serviceTypeId}
+                    onValueChange={(value) => setRequestForm({...requestForm, serviceTypeId: value})}
+                    placeholder="Select service type..."
+                    hasError={!!formErrors.serviceTypeId}
+                    options={serviceTypes.map((type) => ({
+                      label: `${type.name}${type.base_price ? ` - $${type.base_price}` : ''}`,
+                      value: String(type.id),
+                    }))}
+                  />
                   {formErrors.serviceTypeId && <Text style={styles.errorText}>{formErrors.serviceTypeId}</Text>}
                 </View>
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Service Address *</Text>
-                  <View style={[styles.pickerContainer, formErrors.addressId && styles.inputError]}>
-                    <Picker selectedValue={requestForm.addressId} onValueChange={(value) => setRequestForm({...requestForm, addressId: value})} style={styles.picker}>
-                      <Picker.Item label="Select address..." value="" />
-                      {addresses.map((address) => (
-                        <Picker.Item key={address.id} label={`${address.street_address}, ${address.city}`} value={String(address.id)} />
-                      ))}
-                    </Picker>
-                  </View>
+                  <SelectPicker
+                    selectedValue={requestForm.addressId}
+                    onValueChange={(value) => setRequestForm({...requestForm, addressId: value})}
+                    placeholder="Select address..."
+                    hasError={!!formErrors.addressId}
+                    options={addresses.map((address) => ({
+                      label: `${address.street_address}, ${address.city}`,
+                      value: String(address.id),
+                    }))}
+                  />
                   {formErrors.addressId && <Text style={styles.errorText}>{formErrors.addressId}</Text>}
                 </View>
               </View>
@@ -564,13 +568,15 @@ export default function ServiceRequestsScreen() {
                   </View>
                   <View style={[styles.inputGroup, styles.halfWidth]}>
                     <Text style={styles.label}>Time Slot</Text>
-                    <View style={styles.pickerContainer}>
-                      <Picker selectedValue={requestForm.preferredTimeSlot} onValueChange={(value) => setRequestForm({...requestForm, preferredTimeSlot: value})} style={styles.picker}>
-                        <Picker.Item label="Morning" value="morning" />
-                        <Picker.Item label="Afternoon" value="afternoon" />
-                        <Picker.Item label="Evening" value="evening" />
-                      </Picker>
-                    </View>
+                    <SelectPicker
+                      selectedValue={requestForm.preferredTimeSlot}
+                      onValueChange={(value) => setRequestForm({...requestForm, preferredTimeSlot: value})}
+                      options={[
+                        { label: 'Morning', value: 'morning' },
+                        { label: 'Afternoon', value: 'afternoon' },
+                        { label: 'Evening', value: 'evening' },
+                      ]}
+                    />
                   </View>
                 </View>
 
