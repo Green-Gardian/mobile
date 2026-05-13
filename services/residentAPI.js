@@ -248,6 +248,43 @@ export const ResidentAPI = {
     }
   },
 
+  // ===== DRIVER RATING =====
+  rateDriver: async (requestId, ratingData) => {
+    // Backend expects: { rating: number (1-5), comment: string }
+    const payload = {
+      rating: ratingData.rating,
+      comment: ratingData.comment || null,
+    };
+
+    return apiCall(`/service-requests/${requestId}/rate-driver`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getDriverRating: async (requestId) => {
+    try {
+      // Get the service request details which includes driver rating
+      const response = await apiCall(`/service-requests/${requestId}`, { silentError: true });
+      if (response.success && response.serviceRequest) {
+        const sr = response.serviceRequest;
+        if (sr.driver_rating) {
+          return {
+            success: true,
+            rating: {
+              rating: sr.driver_rating,
+              comment: sr.driver_rating_comment,
+              created_at: sr.driver_rated_at,
+            }
+          };
+        }
+      }
+      return { success: false, rating: null };
+    } catch (error) {
+      return { success: false, rating: null };
+    }
+  },
+
   // ===== MESSAGES =====
   getRequestMessages: async (requestId) => {
     return apiCall(`/service-requests/${requestId}/messages`);

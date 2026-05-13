@@ -138,6 +138,14 @@ export default function HomeScreen() {
     }
   }, [navigation, isDriver, state.user]);
 
+  // Refresh data when switching to overview tab
+  useEffect(() => {
+    if (isDriver && state.user && activeTab === 'overview') {
+      console.log('Switched to overview tab, refreshing data...');
+      loadDriverData();
+    }
+  }, [activeTab]);
+
   const loadDriverData = async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -397,7 +405,7 @@ export default function HomeScreen() {
             <View style={styles.progressLeft}>
               <View style={styles.circularProgress}>
                 <Text style={styles.progressNumber}>{driverData.todayCollections}</Text>
-                <Text style={styles.progressTotal}>/{currentTasks.length + driverData.todayCollections}</Text>
+                <Text style={styles.progressTotal}>/{driverData.todayCollections + currentTasks.filter(t => t.status !== 'completed').length}</Text>
               </View>
             </View>
             <View style={styles.progressRight}>
@@ -406,7 +414,7 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.progressTitle}>Today's{'\n'}Progress</Text>
               <Text style={styles.progressSubtitle}>
-                {driverData.todayCollections}/{currentTasks.length + driverData.todayCollections} collections done
+                {driverData.todayCollections}/{driverData.todayCollections + currentTasks.filter(t => t.status !== 'completed').length} collections done
               </Text>
             </View>
           </LinearGradient>
@@ -418,21 +426,21 @@ export default function HomeScreen() {
             <View style={[styles.statIconCircle, { backgroundColor: '#dcfce7' }]}>
               <Ionicons name="leaf" size={24} color="#10b981" />
             </View>
-            <Text style={styles.statValue}>{driverData.totalCollections}</Text>
+            <Text style={styles.statValue}>{driverData.totalCollections || 0}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statItem}>
             <View style={[styles.statIconCircle, { backgroundColor: '#fef3c7' }]}>
               <Ionicons name="star" size={24} color="#f59e0b" />
             </View>
-            <Text style={styles.statValue}>{driverData.rating}</Text>
+            <Text style={styles.statValue}>{driverData.rating || 5.0}</Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
           <View style={styles.statItem}>
             <View style={[styles.statIconCircle, { backgroundColor: '#dbeafe' }]}>
               <Ionicons name="time" size={24} color="#3b82f6" />
             </View>
-            <Text style={styles.statValue}>{currentTasks.length}</Text>
+            <Text style={styles.statValue}>{currentTasks.length || 0}</Text>
             <Text style={styles.statLabel}>Today</Text>
           </View>
         </View>

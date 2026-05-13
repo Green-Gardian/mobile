@@ -39,6 +39,7 @@ export default function ServiceRequestsScreen() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedback, setFeedback] = useState({ rating: '', comment: '' });
   const [existingFeedback, setExistingFeedback] = useState(null);
+  const [existingDriverRating, setExistingDriverRating] = useState(null);
   const [duesStatus, setDuesStatus] = useState(null);
   const [payingDues, setPayingDues] = useState(false);
 
@@ -206,13 +207,24 @@ export default function ServiceRequestsScreen() {
         if (feedbackResponse.success && feedbackResponse.feedback) {
           setExistingFeedback(feedbackResponse.feedback);
         } else {
-          // Feedback not found - this is normal, don't show error
           setExistingFeedback(null);
         }
       } catch (feedbackError) {
-        // Silently handle feedback not found - this is expected for requests without feedback
         console.log('No feedback found for this request (this is normal)');
         setExistingFeedback(null);
+      }
+
+      // Check for existing driver rating
+      try {
+        const ratingResponse = await ResidentAPI.getDriverRating(request.id);
+        if (ratingResponse.success && ratingResponse.rating) {
+          setExistingDriverRating(ratingResponse.rating);
+        } else {
+          setExistingDriverRating(null);
+        }
+      } catch (ratingError) {
+        console.log('No driver rating found for this request (this is normal)');
+        setExistingDriverRating(null);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to load request details');
@@ -222,28 +234,29 @@ export default function ServiceRequestsScreen() {
   };
 
   const submitFeedback = async () => {
-    if (!feedback.rating || !feedback.comment.trim()) {
-      Alert.alert('Validation Error', 'Please provide both rating and comment');
+    if (!feedback.rating) {
+      Alert.alert('Validation Error', 'Please provide a rating');
       return;
     }
 
     try {
       setLoading(true);
-      const response = await ResidentAPI.submitFeedback(selectedRequest.id, {
+      // Use the driver rating endpoint
+      const response = await ResidentAPI.rateDriver(selectedRequest.id, {
         rating: parseInt(feedback.rating, 10),
-        comment: feedback.comment.trim(),
+        comment: feedback.comment.trim() || null,
       });
 
       if (response.success) {
-        Alert.alert('Success', response.message || 'Feedback submitted successfully!');
+        Alert.alert('Success', 'Driver rating submitted successfully!');
         setShowFeedbackModal(false);
         setFeedback({ rating: '', comment: '' });
         await viewRequestDetails(selectedRequest);
       } else {
-        Alert.alert('Error', response.message || 'Failed to submit feedback');
+        Alert.alert('Error', response.message || 'Failed to submit rating');
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to submit feedback');
+      Alert.alert('Error', error.message || 'Failed to submit rating');
     } finally {
       setLoading(false);
     }
@@ -692,11 +705,11 @@ export default function ServiceRequestsScreen() {
                   </Text>
                 </View>
 
-                {existingFeedback ? (
+                {existingDriverRating ? (
                   <View style={styles.detailCard}>
                     <View style={styles.sectionHeaderRow}>
-                      <Ionicons name="chatbubble-ellipses-outline" size={20} color="#10b981" />
-                      <Text style={styles.sectionTitle}>Your Feedback</Text>
+                      <Ionicons name="star" size={20} color="#10b981" />
+                      <Text style={styles.sectionTitle}>Your Driver Rating</Text>
                     </View>
                     <View style={styles.feedbackShowcase}>
                       <View style={[styles.statusIndicator('approved'), { width: 3 }]} />
@@ -704,25 +717,27 @@ export default function ServiceRequestsScreen() {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Ionicons 
                             key={star} 
-                            name={star <= existingFeedback.rating ? "star" : "star-outline"} 
+                            name={star <= existingDriverRating.rating ? "star" : "star-outline"} 
                             size={18} 
                             color="#f59e0b" 
                           />
                         ))}
-                        <Text style={styles.ratingValueText}>{existingFeedback.rating}.0</Text>
+                        <Text style={styles.ratingValueText}>{existingDriverRating.rating}.0</Text>
                       </View>
-                      <View style={styles.feedbackCommentBox}>
-                        <Text style={styles.feedbackCommentText}>"{existingFeedback.comment}"</Text>
-                      </View>
+                      {existingDriverRating.comment && (
+                        <View style={styles.feedbackCommentBox}>
+                          <Text style={styles.feedbackCommentText}>"{existingDriverRating.comment}"</Text>
+                        </View>
+                      )}
                       <Text style={styles.feedbackDateText}>
-                        Submitted {ServiceRequestUtils.formatDate(existingFeedback.created_at)}
+                        Submitted {ServiceRequestUtils.formatDate(existingDriverRating.created_at)}
                       </Text>
                     </View>
                   </View>
-                ) : selectedRequest.status === 'completed' && (
+                ) : selectedRequest.status === 'completed' && selectedRequest.driver_id && (
                   <TouchableOpacity style={styles.feedbackButton} onPress={() => setShowFeedbackModal(true)}>
-                    <Ionicons name="chatbox-outline" size={20} color="white" />
-                    <Text style={styles.feedbackButtonText}>Give Feedback</Text>
+                    <Ionicons name="star" size={20} color="white" />
+                    <Text style={styles.feedbackButtonText}>Rate Driver</Text>
                   </TouchableOpacity>
                 )}
 
@@ -744,7 +759,7 @@ export default function ServiceRequestsScreen() {
             <TouchableOpacity onPress={() => { setShowFeedbackModal(false); setFeedback({ rating: '', comment: '' }); }}>
               <Text style={styles.modalAction}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Submit Feedback</Text>
+            <Text style={styles.modalTitle}>Rate Driver</Text>
             <TouchableOpacity onPress={submitFeedback} disabled={loading}>
               {loading ? <ActivityIndicator size="small" color="#8B5CF6" /> : <Text style={styles.modalActionPrimary}>Submit</Text>}
             </TouchableOpacity>
@@ -755,12 +770,12 @@ export default function ServiceRequestsScreen() {
               <View style={styles.feedbackIconCircle}>
                 <Ionicons name="star" size={32} color="#10b981" />
               </View>
-              <Text style={styles.feedbackMainTitle}>Rate Your Experience</Text>
-              <Text style={styles.feedbackSubtitle}>How was the waste collection service for this request?</Text>
+              <Text style={styles.feedbackMainTitle}>Rate Your Driver</Text>
+              <Text style={styles.feedbackSubtitle}>How was your experience with the driver for this service?</Text>
             </View>
 
             <View style={styles.feedbackFormCard}>
-              <Text style={styles.feedbackLabel}>Overal Rating</Text>
+              <Text style={styles.feedbackLabel}>Driver Rating</Text>
               <View style={styles.starSelectionRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity 
@@ -777,12 +792,12 @@ export default function ServiceRequestsScreen() {
                 ))}
               </View>
 
-              <Text style={styles.feedbackLabel}>Your Comments</Text>
+              <Text style={styles.feedbackLabel}>Your Comments (Optional)</Text>
               <TextInput
                 style={styles.feedbackInput}
                 value={feedback.comment}
                 onChangeText={(text) => setFeedback({ ...feedback, comment: text })}
-                placeholder="Share your thoughts about the service..."
+                placeholder="Share your thoughts about the driver's service..."
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
