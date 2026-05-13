@@ -160,7 +160,7 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
                 {markersToRender.map((marker) => {
                     const lat = parseFloat(marker.latitude);
                     const lon = parseFloat(marker.longitude);
-                    if (!lat || !lon) return null;
+                    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
                     // Task markers get purple; bin markers get fill-level color
                     const isActive = activeTask && marker.isTask && activeTask.id === marker.taskId;
