@@ -29,6 +29,18 @@ export const AuthProvider = ({ children }) => {
           }
         }
 
+        // Backfill id and society_id from JWT for sessions stored before this fix
+        if (access && user && !user.id) {
+          try {
+            const payload = access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const claims = JSON.parse(atob(payload));
+            if (claims.id) user.id = claims.id;
+            if (user.society_id === undefined) user.society_id = claims.society_id ?? null;
+          } catch (e) {
+            console.log('Error parsing JWT claims:', e);
+          }
+        }
+
         setState((s) => ({
           ...s,
           accessToken: access,
@@ -45,20 +57,18 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = useCallback(async (email, password, totpCode) => {
     const res = await AuthAPI.signIn(email, password, totpCode);
-    const { access_token, refresh_token, username, role, is_verified } = res.data;
+    const { access_token, refresh_token, user_id, username, role, is_verified, society_id } = res.data;
     const normalizedRole = String(role).toLowerCase();
     if (normalizedRole !== 'driver' && normalizedRole !== 'resident') {
       throw new Error('This app is available only for drivers and residents');
     }
     await saveTokens(access_token, refresh_token);
 
-    // Save user data to secure storage
-    const userData = { username, role: normalizedRole, is_verified };
+    const userData = { id: user_id, username, role: normalizedRole, is_verified, society_id: society_id ?? null };
     await SecureStore.setItemAsync('gg_user_data', JSON.stringify(userData));
 
     setState({ accessToken: access_token, refreshToken: refresh_token, user: userData, loading: false });
 
-    // Return success to indicate successful login
     return { success: true, user: userData };
   }, []);
 
