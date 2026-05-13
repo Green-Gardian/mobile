@@ -126,6 +126,77 @@ export default function HomeScreen() {
     }
   }, [isDriver, state.user]);
 
+  // Socket listener for new task assignments
+  useEffect(() => {
+    if (!isDriver || !socket) return;
+
+    console.log('Setting up socket listeners for task updates...');
+
+    // Listen for new service request assignments
+    const handleServiceRequestAssigned = (data) => {
+      console.log('📩 New service request assigned:', data);
+      
+      // Add the new task to current tasks
+      setCurrentTasks(prev => {
+        // Check if task already exists
+        const exists = prev.some(task => 
+          task.id === data.serviceRequestId || 
+          task.service_request_id === data.serviceRequestId
+        );
+        
+        if (exists) {
+          console.log('Task already exists, skipping...');
+          return prev;
+        }
+
+        // Create new task object matching the structure
+        const newTask = {
+          id: data.serviceRequestId,
+          service_request_id: data.serviceRequestId,
+          bin_id: data.title || `SR-${data.serviceRequestId}`,
+          binId: data.title || `SR-${data.serviceRequestId}`,
+          location: data.location || {},
+          fill_level: data.estimatedWeight || 0,
+          priority: data.priority || 'normal',
+          status: 'pending',
+          task_type: 'service_request',
+          origin: 'service_request',
+          assigned_at: new Date().toISOString(),
+          service_type: data.serviceType,
+        };
+
+        console.log('✅ Adding new task to dashboard:', newTask);
+        return [newTask, ...prev];
+      });
+
+      // Optionally show a notification or alert
+      Alert.alert(
+        'New Task Assigned',
+        `You have been assigned a new service request: ${data.title}`,
+        [{ text: 'OK' }]
+      );
+
+      // Reload driver data to get updated stats
+      loadDriverData(true);
+    };
+
+    // Listen for general task assignments (bin collections)
+    const handleTaskAssigned = (data) => {
+      console.log('📩 New task assigned:', data);
+      
+      // Reload tasks to get the latest
+      loadDriverData(true);
+    };
+
+    socket.on('service-request:assigned', handleServiceRequestAssigned);
+    socket.on('task:assigned', handleTaskAssigned);
+
+    return () => {
+      socket.off('service-request:assigned', handleServiceRequestAssigned);
+      socket.off('task:assigned', handleTaskAssigned);
+    };
+  }, [isDriver, socket]);
+
   // Add focus listener to refresh data when tab becomes active (only for drivers)
   useEffect(() => {
     if (isDriver && state.user) {
