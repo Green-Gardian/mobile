@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Dimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,9 @@ import { Picker } from '@react-native-picker/picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { DriverAPI } from '../services/driver';
-import { AuthAPI } from '../services/api';
+import { AuthAPI, api } from '../services/api';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadToCloudinary } from '../utils/cloudinary';
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as OTPAuth from 'otpauth';
@@ -44,6 +46,101 @@ export default function ProfileTab() {
   const [dobYear, setDobYear] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobDay, setDobDay] = useState('');
+
+  // Calendar date picker for DOB
+  const [showDobPicker, setShowDobPicker] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let b = 0; b < firstDayIndex; b++) days.push(null);
+    for (let d = 1; d <= totalDays; d++) days.push(new Date(year, month, d));
+    return days;
+  }, [calendarMonth]);
+  const changeCalendarMonth = (dir) => setCalendarMonth(prev => {
+    const n = new Date(prev); n.setMonth(prev.getMonth() + dir); return n;
+  });
+  const selectDob = (date) => {
+    if (!date) return;
+    const iso = date.toISOString().slice(0, 10);
+    setProfileData(p => ({ ...p, date_of_birth: iso }));
+    setDobYear(iso.slice(0, 4));
+    setDobMonth(iso.slice(5, 7));
+    setDobDay(iso.slice(8, 10));
+    setShowDobPicker(false);
+  };
+
+  // Edit name/phone modal
+  const [showEditInfoModal, setShowEditInfoModal] = useState(false);
+  const [editInfoForm, setEditInfoForm] = useState({ first_name: '', last_name: '', phone_number: '' });
+  const [savingInfo, setSavingInfo] = useState(false);
+
+  const openEditInfoModal = () => {
+    setEditInfoForm({ first_name: profileData.first_name, last_name: profileData.last_name, phone_number: profileData.phone_number });
+    setShowEditInfoModal(true);
+  };
+  const submitEditInfo = async () => {
+    const { first_name, last_name, phone_number } = editInfoForm;
+    if (!first_name.trim() || !last_name.trim() || !phone_number.trim()) {
+      Alert.alert('Validation Error', 'All fields are required');
+      return;
+    }
+    try {
+      setSavingInfo(true);
+      await api.put('/auth/update-profile', {
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        phone_number: phone_number.trim(),
+        email: profileData.email,
+        profile_picture: profileData.profile_picture || null,
+      });
+      setProfileData(p => ({ ...p, first_name: first_name.trim(), last_name: last_name.trim(), phone_number: phone_number.trim() }));
+      setShowEditInfoModal(false);
+      Alert.alert('Success', 'Profile updated!');
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSavingInfo(false);
+    }
+  };
+
+  // Image upload
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Camera roll permission required.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled) {
+        setSaving(true);
+        const imageUrl = await uploadToCloudinary(result.assets[0].uri);
+        setProfileData(p => ({ ...p, profile_picture: imageUrl }));
+        await api.put('/auth/update-profile', {
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          phone_number: profileData.phone_number,
+          email: profileData.email,
+          profile_picture: imageUrl,
+        });
+        Alert.alert('Success', 'Profile picture updated!');
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to upload image.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -311,8 +408,8 @@ export default function ProfileTab() {
                 </Text>
               </View>
             )}
-            <TouchableOpacity style={styles.editAvatarButton}>
-              <Ionicons name="camera" size={18} color="#ffffff" />
+            <TouchableOpacity style={styles.editAvatarButton} onPress={pickImage} disabled={saving}>
+              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={16} color="#ffffff" />}
             </TouchableOpacity>
           </View>
           <Text style={styles.profileName}>
@@ -351,6 +448,10 @@ export default function ProfileTab() {
           <View style={styles.sectionHeaderRow}>
             <Ionicons name="person-outline" size={22} color="#10b981" />
             <Text style={styles.sectionTitle}>Personal Information</Text>
+            <TouchableOpacity style={styles.editInfoBtn} onPress={openEditInfoModal}>
+              <Ionicons name="create-outline" size={16} color="#047857" />
+              <Text style={styles.editInfoBtnText}>Edit</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.infoRow}>
@@ -360,61 +461,59 @@ export default function ProfileTab() {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={styles.infoValue}>{profileData.phone_number}</Text>
+            <Text style={styles.infoValue}>{profileData.phone_number || '—'}</Text>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Date of Birth</Text>
-            <View style={styles.dobRow}>
-              <View style={[styles.pickerContainer, styles.dobPicker]}>
-                <Picker
-                  selectedValue={dobYear}
-                  onValueChange={(value) => {
-                    setDobYear(value);
-                    const newDob = `${value}-${dobMonth || '01'}-${dobDay || '01'}`;
-                    setProfileData({ ...profileData, date_of_birth: newDob });
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Year" value="" />
-                  {years.map((y) => (
-                    <Picker.Item key={y} label={y} value={y} />
-                  ))}
-                </Picker>
+            <TouchableOpacity
+              style={styles.dateInputButton}
+              onPress={() => { setCalendarMonth(profileData.date_of_birth ? new Date(profileData.date_of_birth) : new Date()); setShowDobPicker(p => !p); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.dateInputText}>
+                {profileData.date_of_birth
+                  ? new Date(profileData.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                  : 'Select date of birth'}
+              </Text>
+              <Ionicons name="calendar-outline" size={20} color="#10b981" />
+            </TouchableOpacity>
+            {showDobPicker && (
+              <View style={styles.calendarPicker}>
+                <View style={styles.calendarNav}>
+                  <TouchableOpacity onPress={() => changeCalendarMonth(-1)}>
+                    <Ionicons name="chevron-back" size={18} color="#1e293b" />
+                  </TouchableOpacity>
+                  <Text style={styles.calendarMonthLabel}>
+                    {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </Text>
+                  <TouchableOpacity onPress={() => changeCalendarMonth(1)}>
+                    <Ionicons name="chevron-forward" size={18} color="#1e293b" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.calendarWeekRow}>
+                  {daysOfWeek.map(d => <Text key={d} style={styles.calendarWeekDay}>{d}</Text>)}
+                </View>
+                <View style={styles.calendarGrid}>
+                  {calendarDays.map((day, idx) => {
+                    const ds = day ? day.toISOString().slice(0, 10) : '';
+                    const isSel = profileData.date_of_birth === ds;
+                    return (
+                      <TouchableOpacity
+                        key={`${idx}-${ds}`}
+                        style={[styles.calendarDay, isSel && styles.calendarDaySelected, !day && styles.calendarDayEmpty]}
+                        disabled={!day}
+                        onPress={() => selectDob(day)}
+                      >
+                        <Text style={[styles.calendarDayText, isSel && styles.calendarDayTextSelected]}>
+                          {day ? day.getDate() : ''}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-              <View style={[styles.pickerContainer, styles.dobPicker]}>
-                <Picker
-                  selectedValue={dobMonth}
-                  onValueChange={(value) => {
-                    setDobMonth(value);
-                    const newDob = `${dobYear || '2000'}-${value}-${dobDay || '01'}`;
-                    setProfileData({ ...profileData, date_of_birth: newDob });
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Mon" value="" />
-                  {months.map((m) => (
-                    <Picker.Item key={m} label={m} value={m} />
-                  ))}
-                </Picker>
-              </View>
-              <View style={[styles.pickerContainer, styles.dobPicker]}>
-                <Picker
-                  selectedValue={dobDay}
-                  onValueChange={(value) => {
-                    setDobDay(value);
-                    const newDob = `${dobYear || '2000'}-${dobMonth || '01'}-${value}`;
-                    setProfileData({ ...profileData, date_of_birth: newDob });
-                  }}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Day" value="" />
-                  {daysInSelectedMonth.map((d) => (
-                    <Picker.Item key={d} label={d} value={d} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -509,8 +608,8 @@ export default function ProfileTab() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.modernActionBtn}>
-            <View style={[styles.actionIconCircle, { backgroundColor: '#dbeafe' }]}>
-              <Ionicons name="notifications-outline" size={22} color="#3b82f6" />
+            <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+              <Ionicons name="notifications-outline" size={22} color="#047857" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Notifications</Text>
@@ -531,8 +630,8 @@ export default function ProfileTab() {
             style={styles.modernActionBtn}
             onPress={() => router.push('/feedback')}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor: '#fef3c7' }]}>
-              <Ionicons name="chatbubble-ellipses-outline" size={22} color="#f59e0b" />
+            <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+              <Ionicons name="chatbubble-ellipses-outline" size={22} color="#059669" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Send Feedback</Text>
@@ -545,8 +644,8 @@ export default function ProfileTab() {
             style={styles.modernActionBtn}
             onPress={() => router.push('/my-feedback')}
           >
-            <View style={[styles.actionIconCircle, { backgroundColor: '#f3e8ff' }]}>
-              <Ionicons name="list-outline" size={22} color="#8b5cf6" />
+            <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+              <Ionicons name="list-outline" size={22} color="#047857" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>My Feedback</Text>
@@ -556,8 +655,8 @@ export default function ProfileTab() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.modernActionBtn}>
-            <View style={[styles.actionIconCircle, { backgroundColor: '#fce7f3' }]}>
-              <Ionicons name="call-outline" size={22} color="#ec4899" />
+            <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+              <Ionicons name="call-outline" size={22} color="#059669" />
             </View>
             <View style={styles.actionTextContainer}>
               <Text style={styles.actionTitle}>Contact Support</Text>
@@ -575,6 +674,62 @@ export default function ProfileTab() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Edit Name/Phone Modal */}
+      <Modal
+        visible={showEditInfoModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditInfoModal(false)}
+      >
+        <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#f8fafc' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowEditInfoModal(false)}>
+              <Ionicons name="close" size={24} color="#64748b" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <TouchableOpacity onPress={submitEditInfo} disabled={savingInfo}>
+              {savingInfo ? <ActivityIndicator size="small" color="#10b981" /> : <Text style={styles.modalSaveButtonText}>Save</Text>}
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>First Name *</Text>
+              <TextInput
+                style={styles.input}
+                value={editInfoForm.first_name}
+                onChangeText={t => setEditInfoForm(p => ({ ...p, first_name: t }))}
+                placeholder="First name"
+                autoCapitalize="words"
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Last Name *</Text>
+              <TextInput
+                style={styles.input}
+                value={editInfoForm.last_name}
+                onChangeText={t => setEditInfoForm(p => ({ ...p, last_name: t }))}
+                placeholder="Last name"
+                autoCapitalize="words"
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number *</Text>
+              <TextInput
+                style={styles.input}
+                value={editInfoForm.phone_number}
+                onChangeText={t => setEditInfoForm(p => ({ ...p, phone_number: t }))}
+                placeholder="e.g. 03001234567"
+                keyboardType="phone-pad"
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Privacy & Security Modal */}
       <Modal
@@ -618,8 +773,8 @@ export default function ProfileTab() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modernActionBtn} onPress={() => { setShowPrivacyModal(false); setTimeout(() => setShowPasswordModal(true), 300); }}>
-              <View style={[styles.actionIconCircle, { backgroundColor: '#dbeafe' }]}>
-                <Ionicons name="lock-closed-outline" size={22} color="#3b82f6" />
+              <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+                <Ionicons name="lock-closed-outline" size={22} color="#059669" />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Change Password</Text>
@@ -629,8 +784,8 @@ export default function ProfileTab() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modernActionBtn} onPress={() => Alert.alert('Privacy Policy', 'This will link to the company Privacy Policy.')}>
-              <View style={[styles.actionIconCircle, { backgroundColor: '#fef3c7' }]}>
-                <Ionicons name="document-text-outline" size={22} color="#f59e0b" />
+              <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+                <Ionicons name="document-text-outline" size={22} color="#059669" />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Privacy Policy</Text>
@@ -640,8 +795,8 @@ export default function ProfileTab() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modernActionBtn} onPress={() => Alert.alert('Terms of Service', 'This will link to the company Terms of Service.')}>
-              <View style={[styles.actionIconCircle, { backgroundColor: '#f3e8ff' }]}>
-                <Ionicons name="newspaper-outline" size={22} color="#8b5cf6" />
+              <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
+                <Ionicons name="newspaper-outline" size={22} color="#047857" />
               </View>
               <View style={styles.actionTextContainer}>
                 <Text style={styles.actionTitle}>Terms of Service</Text>
@@ -777,14 +932,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    backgroundColor: '#059669',
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    backgroundColor: '#047857',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#10b981',
+    borderWidth: 2,
+    borderColor: '#ffffff',
   },
   profileName: {
     fontSize: moderateScale(24),
@@ -832,11 +987,8 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(16),
     padding: moderateScale(16),
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   quickStatValue: {
     fontSize: moderateScale(16),
@@ -857,11 +1009,8 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(16),
     padding: moderateScale(20),
     borderRadius: moderateScale(16),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -1038,6 +1187,97 @@ const styles = StyleSheet.create({
   },
   mfaBadgeText: {
     fontSize: moderateScale(12),
+    fontWeight: '700',
+  },
+  editInfoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(5),
+    borderRadius: moderateScale(20),
+    gap: moderateScale(4),
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    marginLeft: 'auto',
+  },
+  editInfoBtnText: {
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+    color: '#047857',
+  },
+  dateInputButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: moderateScale(12),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(13),
+  },
+  dateInputText: {
+    fontSize: moderateScale(15),
+    color: '#1e293b',
+  },
+  calendarPicker: {
+    marginTop: verticalScale(10),
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    borderRadius: moderateScale(14),
+    padding: moderateScale(14),
+    backgroundColor: '#ffffff',
+  },
+  calendarNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: verticalScale(12),
+  },
+  calendarMonthLabel: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  calendarWeekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(8),
+  },
+  calendarWeekDay: {
+    width: moderateScale(32),
+    textAlign: 'center',
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  calendarDay: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(6),
+  },
+  calendarDayEmpty: {
+    backgroundColor: 'transparent',
+  },
+  calendarDaySelected: {
+    backgroundColor: '#dcfce7',
+  },
+  calendarDayText: {
+    color: '#1e293b',
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+  },
+  calendarDayTextSelected: {
+    color: '#166534',
     fontWeight: '700',
   },
 });

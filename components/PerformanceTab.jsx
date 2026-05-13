@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
-// Responsive sizing helpers
 const scale = (size) => (width / 375) * size;
 const verticalScale = (size) => (height / 812) * size;
 const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
@@ -93,9 +92,8 @@ export default function PerformanceTab() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10b981']} tintColor="#10b981" />
         }
       >
-        {/* Header with Gradient */}
         <LinearGradient
-          colors={['#10b981', '#059669']}
+          colors={['#047857', '#065f46']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.header}
@@ -105,10 +103,10 @@ export default function PerformanceTab() {
           <Text style={styles.headerSubtitle}>Track your achievements</Text>
         </LinearGradient>
 
-        {/* Performance Overview Cards */}
+        {/* Overview Cards */}
         <View style={styles.overviewContainer}>
           <View style={styles.overviewCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
+            <View style={styles.iconCircle}>
               <Ionicons name="checkmark-done" size={24} color="#10b981" />
             </View>
             <Text style={styles.overviewNumber}>{performanceData.totalCollections}</Text>
@@ -116,8 +114,8 @@ export default function PerformanceTab() {
           </View>
 
           <View style={styles.overviewCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#fef3c7' }]}>
-              <Ionicons name="star" size={24} color="#f59e0b" />
+            <View style={styles.iconCircle}>
+              <Ionicons name="star" size={24} color="#10b981" />
             </View>
             <Text style={styles.overviewNumber}>{performanceData.averageRating.toFixed(1)}</Text>
             <Text style={styles.overviewLabel}>Average Rating</Text>
@@ -140,7 +138,7 @@ export default function PerformanceTab() {
                   <Text style={styles.legendText}>Collections</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: '#3b82f6' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: '#0d9488' }]} />
                   <Text style={styles.legendText}>Rating</Text>
                 </View>
               </View>
@@ -160,7 +158,7 @@ export default function PerformanceTab() {
                 ))
               ) : (
                 <View style={styles.emptyChart}>
-                  <Ionicons name="bar-chart-outline" size={48} color="#cbd5e1" />
+                  <Ionicons name="bar-chart-outline" size={48} color="#d1fae5" />
                   <Text style={styles.emptyChartText}>No data available</Text>
                   <Text style={styles.emptyChartSubtext}>Complete tasks to see your performance</Text>
                 </View>
@@ -177,19 +175,19 @@ export default function PerformanceTab() {
           </View>
 
           <View style={styles.trendCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
+            <View style={styles.iconCircle}>
               <Ionicons name="calendar" size={20} color="#10b981" />
             </View>
             <View style={styles.trendContent}>
               <Text style={styles.trendLabel}>This Month Collections</Text>
               <Text style={styles.trendSubtext}>
-                {performanceData.lastMonthCollections > 0 
+                {performanceData.lastMonthCollections > 0
                   ? `vs Last Month (${performanceData.lastMonthCollections})`
                   : 'vs Last Month'}
               </Text>
             </View>
             <Text style={[styles.trendValue, {
-              color: performanceData.thisMonthCollections >= performanceData.lastMonthCollections ? '#10b981' : '#ef4444'
+              color: performanceData.thisMonthCollections >= performanceData.lastMonthCollections ? '#10b981' : '#dc2626'
             }]}>
               {performanceData.lastMonthCollections > 0
                 ? `${performanceData.thisMonthCollections >= performanceData.lastMonthCollections ? '+' : ''}${Math.round(((performanceData.thisMonthCollections - performanceData.lastMonthCollections) / performanceData.lastMonthCollections) * 100)}%`
@@ -198,8 +196,8 @@ export default function PerformanceTab() {
           </View>
 
           <View style={styles.trendCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#dbeafe' }]}>
-              <Ionicons name="speedometer" size={20} color="#3b82f6" />
+            <View style={styles.iconCircle}>
+              <Ionicons name="speedometer" size={20} color="#0d9488" />
             </View>
             <View style={styles.trendContent}>
               <Text style={styles.trendLabel}>On-Time Rate</Text>
@@ -209,19 +207,19 @@ export default function PerformanceTab() {
           </View>
 
           <View style={styles.trendCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#fef3c7' }]}>
-              <Ionicons name="star" size={20} color="#f59e0b" />
+            <View style={styles.iconCircle}>
+              <Ionicons name="star" size={20} color="#10b981" />
             </View>
             <View style={styles.trendContent}>
               <Text style={styles.trendLabel}>Average Rating</Text>
               <Text style={styles.trendSubtext}>
-                {performanceData.lastMonthRating > 0 
+                {performanceData.lastMonthRating > 0
                   ? `vs Last Month (${performanceData.lastMonthRating.toFixed(1)})`
                   : 'Current rating'}
               </Text>
             </View>
             <Text style={[styles.trendValue, {
-              color: performanceData.thisMonthRating >= performanceData.lastMonthRating ? '#10b981' : '#ef4444'
+              color: performanceData.thisMonthRating >= performanceData.lastMonthRating ? '#10b981' : '#dc2626'
             }]}>
               {performanceData.lastMonthRating > 0
                 ? `${performanceData.thisMonthRating >= performanceData.lastMonthRating ? '+' : ''}${(performanceData.thisMonthRating - performanceData.lastMonthRating).toFixed(1)}`
@@ -230,20 +228,20 @@ export default function PerformanceTab() {
           </View>
 
           <View style={styles.trendCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#fee2e2' }]}>
-              <Ionicons name="alert-circle" size={20} color="#ef4444" />
+            <View style={[styles.iconCircle, { backgroundColor: performanceData.complaints > 0 ? '#fef2f2' : '#ecfdf5' }]}>
+              <Ionicons name="alert-circle" size={20} color={performanceData.complaints > 0 ? '#dc2626' : '#10b981'} />
             </View>
             <View style={styles.trendContent}>
               <Text style={styles.trendLabel}>Complaints</Text>
               <Text style={styles.trendSubtext}>Customer feedback</Text>
             </View>
-            <Text style={[styles.trendValue, { color: performanceData.complaints > 0 ? '#ef4444' : '#10b981' }]}>
+            <Text style={[styles.trendValue, { color: performanceData.complaints > 0 ? '#dc2626' : '#10b981' }]}>
               {performanceData.complaints}
             </Text>
           </View>
 
           <View style={styles.trendCard}>
-            <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
+            <View style={styles.iconCircle}>
               <Ionicons name="thumbs-up" size={20} color="#10b981" />
             </View>
             <View style={styles.trendContent}>
@@ -274,7 +272,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: verticalScale(12),
   },
-  // Header with Gradient
   header: {
     paddingTop: verticalScale(40),
     paddingBottom: verticalScale(32),
@@ -292,9 +289,8 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: moderateScale(14),
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
-  // Overview Cards
   overviewContainer: {
     flexDirection: 'row',
     marginHorizontal: moderateScale(20),
@@ -308,19 +304,17 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(16),
     padding: moderateScale(20),
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   iconCircle: {
-    width: moderateScale(56),
-    height: moderateScale(56),
-    borderRadius: moderateScale(28),
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(10),
+    backgroundColor: '#ecfdf5',
   },
   overviewNumber: {
     fontSize: moderateScale(32),
@@ -334,7 +328,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  // Section Styles
   section: {
     marginHorizontal: moderateScale(20),
     marginBottom: verticalScale(20),
@@ -350,16 +343,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e293b',
   },
-  // Chart Card
   chartCard: {
     backgroundColor: '#ffffff',
     borderRadius: moderateScale(16),
     padding: moderateScale(20),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   chartHeader: {
     flexDirection: 'row',
@@ -416,7 +405,7 @@ const styles = StyleSheet.create({
   },
   ratingBar: {
     width: moderateScale(14),
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#0d9488',
     borderRadius: moderateScale(4),
     minHeight: verticalScale(4),
   },
@@ -449,19 +438,15 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(4),
     textAlign: 'center',
   },
-  // Trend Cards
   trendCard: {
     backgroundColor: '#ffffff',
     borderRadius: moderateScale(12),
     padding: moderateScale(16),
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: verticalScale(12),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    marginBottom: verticalScale(10),
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   trendContent: {
     flex: 1,

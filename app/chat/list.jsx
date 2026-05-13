@@ -21,7 +21,7 @@ export default function ChatListScreen() {
     const insets = useSafeAreaInsets();
     const { state } = useAuth();
     const isDriver = state.user?.role === 'driver';
-    const headerColors = isDriver ? ['#6d28d9', '#8b5cf6'] : ['#10b981', '#059669'];
+    const headerColors = ['#047857', '#065f46'];
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     retryButton: {
-        backgroundColor: '#ef4444',
+        backgroundColor: '#047857',
         paddingHorizontal: 32,
         paddingVertical: 14,
         borderRadius: 12,

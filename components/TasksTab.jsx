@@ -6,7 +6,6 @@ import { DriverAPI } from '../services/driver';
 
 const { width, height } = Dimensions.get('window');
 
-// Responsive sizing helpers
 const scale = (size) => (width / 375) * size;
 const verticalScale = (size) => (height / 812) * size;
 const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
@@ -16,7 +15,7 @@ export default function TasksTab() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, pending, in_progress, completed
+  const [filter, setFilter] = useState('all');
 
   const appState = useRef(AppState.currentState);
 
@@ -80,18 +79,18 @@ export default function TasksTab() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return '#10b981';
-      case 'in_progress': return '#3b82f6';
-      case 'pending': return '#f59e0b';
-      default: return '#64748b';
+      case 'in_progress': return '#0d9488';
+      case 'pending': return '#64748b';
+      default: return '#94a3b8';
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high': return '#ef4444';
-      case 'medium': return '#f59e0b';
+      case 'high': return '#dc2626';
+      case 'medium': return '#64748b';
       case 'low': return '#10b981';
-      default: return '#64748b';
+      default: return '#94a3b8';
     }
   };
 
@@ -118,9 +117,8 @@ export default function TasksTab() {
 
   return (
     <View style={styles.container}>
-      {/* Header with Gradient */}
       <LinearGradient
-        colors={['#10b981', '#059669']}
+        colors={['#047857', '#065f46']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
@@ -133,44 +131,23 @@ export default function TasksTab() {
       {/* Filter Tabs */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          <TouchableOpacity
-            style={[styles.filterTab, filter === 'all' && styles.filterTabActive]}
-            onPress={() => setFilter('all')}
-          >
-            <Text style={[styles.filterTabText, filter === 'all' && styles.filterTabTextActive]}>
-              All ({taskCounts.all})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterTab, filter === 'pending' && styles.filterTabActive]}
-            onPress={() => setFilter('pending')}
-          >
-            <View style={[styles.filterDot, { backgroundColor: '#f59e0b' }]} />
-            <Text style={[styles.filterTabText, filter === 'pending' && styles.filterTabTextActive]}>
-              Pending ({taskCounts.pending})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterTab, filter === 'in_progress' && styles.filterTabActive]}
-            onPress={() => setFilter('in_progress')}
-          >
-            <View style={[styles.filterDot, { backgroundColor: '#3b82f6' }]} />
-            <Text style={[styles.filterTabText, filter === 'in_progress' && styles.filterTabTextActive]}>
-              In Progress ({taskCounts.in_progress})
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.filterTab, filter === 'completed' && styles.filterTabActive]}
-            onPress={() => setFilter('completed')}
-          >
-            <View style={[styles.filterDot, { backgroundColor: '#10b981' }]} />
-            <Text style={[styles.filterTabText, filter === 'completed' && styles.filterTabTextActive]}>
-              Completed ({taskCounts.completed})
-            </Text>
-          </TouchableOpacity>
+          {[
+            { key: 'all', label: `All (${taskCounts.all})`, dot: null },
+            { key: 'pending', label: `Pending (${taskCounts.pending})`, dot: '#64748b' },
+            { key: 'in_progress', label: `In Progress (${taskCounts.in_progress})`, dot: '#0d9488' },
+            { key: 'completed', label: `Completed (${taskCounts.completed})`, dot: '#10b981' },
+          ].map((f) => (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.filterTab, filter === f.key && styles.filterTabActive]}
+              onPress={() => setFilter(f.key)}
+            >
+              {f.dot && <View style={[styles.filterDot, { backgroundColor: filter === f.key ? 'rgba(255,255,255,0.7)' : f.dot }]} />}
+              <Text style={[styles.filterTabText, filter === f.key && styles.filterTabTextActive]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
 
@@ -183,7 +160,7 @@ export default function TasksTab() {
       >
         {error && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={24} color="#ef4444" />
+            <Ionicons name="alert-circle" size={24} color="#dc2626" />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => loadTasks()}>
               <Text style={styles.retryButtonText}>Retry</Text>
@@ -193,10 +170,10 @@ export default function TasksTab() {
 
         {filteredTasks.length === 0 && !error && (
           <View style={styles.emptyContainer}>
-            <Ionicons name="checkmark-done-circle-outline" size={64} color="#cbd5e1" />
+            <Ionicons name="checkmark-done-circle-outline" size={64} color="#d1fae5" />
             <Text style={styles.emptyTitle}>No {filter !== 'all' ? filter.replace('_', ' ') : ''} tasks</Text>
             <Text style={styles.emptySubtitle}>
-              {filter === 'all' 
+              {filter === 'all'
                 ? 'Tasks will appear here when bins need collection'
                 : `You don't have any ${filter.replace('_', ' ')} tasks`}
             </Text>
@@ -207,16 +184,15 @@ export default function TasksTab() {
           const isServiceRequest = task.task_type === 'service_request' || task.origin === 'service_request';
           return (
             <View key={task.id} style={styles.taskCard}>
-              {/* Task Header */}
               <View style={styles.taskHeader}>
                 <View style={styles.taskHeaderLeft}>
-                  <View style={[styles.taskIconContainer, { 
-                    backgroundColor: isServiceRequest ? '#f3e8ff' : '#dcfce7' 
+                  <View style={[styles.taskIconContainer, {
+                    backgroundColor: '#ecfdf5',
                   }]}>
-                    <Ionicons 
-                      name={isServiceRequest ? "document-text" : "trash"} 
-                      size={20} 
-                      color={isServiceRequest ? '#8b5cf6' : '#10b981'} 
+                    <Ionicons
+                      name={isServiceRequest ? "document-text" : "trash"}
+                      size={20}
+                      color={isServiceRequest ? '#047857' : '#10b981'}
                     />
                   </View>
                   <View style={styles.taskHeaderText}>
@@ -228,20 +204,23 @@ export default function TasksTab() {
                     </Text>
                   </View>
                 </View>
-                <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(task.priority) }]}>
-                  <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
+                <View style={[styles.priorityBadge, {
+                  backgroundColor: task.priority === 'high' ? '#fef2f2' : '#f8fafc',
+                  borderColor: getPriorityColor(task.priority),
+                }]}>
+                  <Text style={[styles.priorityText, { color: getPriorityColor(task.priority) }]}>
+                    {task.priority.toUpperCase()}
+                  </Text>
                 </View>
               </View>
 
-              {/* Location */}
               <View style={styles.taskLocation}>
-                <Ionicons name="location" size={16} color="#64748b" />
+                <Ionicons name="location" size={16} color="#10b981" />
                 <Text style={styles.taskLocationText} numberOfLines={2}>
                   {task.location?.address || task.location || 'Location not available'}
                 </Text>
               </View>
 
-              {/* Task Details */}
               <View style={styles.taskDetails}>
                 <View style={styles.taskDetailItem}>
                   <Ionicons name="speedometer-outline" size={16} color="#64748b" />
@@ -258,17 +237,15 @@ export default function TasksTab() {
                 </View>
               </View>
 
-              {/* Fill Level Bar (only for bins) */}
               {!isServiceRequest && (
                 <View style={styles.fillLevelBar}>
-                  <View style={[styles.fillLevelProgress, { 
+                  <View style={[styles.fillLevelProgress, {
                     width: `${task.fill_level || 0}%`,
-                    backgroundColor: task.fill_level > 80 ? '#ef4444' : task.fill_level > 50 ? '#f59e0b' : '#10b981'
+                    backgroundColor: task.fill_level > 80 ? '#dc2626' : task.fill_level > 50 ? '#d97706' : '#10b981'
                   }]} />
                 </View>
               )}
 
-              {/* Action Buttons */}
               {task.status !== 'completed' && (
                 <View style={styles.taskActions}>
                   {task.status === 'pending' && (
@@ -276,7 +253,7 @@ export default function TasksTab() {
                       style={styles.startButton}
                       onPress={() => handleUpdateTaskStatus(task.id, 'in_progress')}
                     >
-                      <Ionicons name="play-circle-outline" size={18} color="#3b82f6" />
+                      <Ionicons name="play-circle-outline" size={18} color="#047857" />
                       <Text style={styles.startButtonText}>Start</Text>
                     </TouchableOpacity>
                   )}
@@ -313,7 +290,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: verticalScale(12),
   },
-  // Header with Gradient
   header: {
     paddingTop: verticalScale(40),
     paddingBottom: verticalScale(32),
@@ -331,9 +307,8 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: moderateScale(14),
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
-  // Filter Tabs
   filterContainer: {
     marginTop: verticalScale(-16),
     marginBottom: verticalScale(16),
@@ -346,23 +321,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    paddingHorizontal: moderateScale(16),
-    paddingVertical: verticalScale(10),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(9),
     borderRadius: moderateScale(20),
     gap: moderateScale(6),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   filterTabActive: {
     backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
   filterTabText: {
     fontSize: moderateScale(13),
     fontWeight: '600',
-    color: '#64748b',
+    color: '#475569',
   },
   filterTabTextActive: {
     color: '#ffffff',
@@ -372,12 +345,10 @@ const styles = StyleSheet.create({
     height: moderateScale(8),
     borderRadius: moderateScale(4),
   },
-  // Scroll Content
   scrollContent: {
     paddingHorizontal: moderateScale(20),
     paddingBottom: verticalScale(100),
   },
-  // Error State
   errorContainer: {
     backgroundColor: '#fef2f2',
     borderRadius: moderateScale(12),
@@ -385,15 +356,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: verticalScale(16),
     gap: verticalScale(12),
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
   errorText: {
     fontSize: moderateScale(14),
-    color: '#ef4444',
+    color: '#dc2626',
     textAlign: 'center',
     fontWeight: '500',
   },
   retryButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#047857',
     paddingHorizontal: moderateScale(20),
     paddingVertical: verticalScale(8),
     borderRadius: moderateScale(8),
@@ -403,7 +376,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
-  // Empty State
   emptyContainer: {
     paddingVertical: verticalScale(60),
     alignItems: 'center',
@@ -411,7 +383,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: moderateScale(18),
     fontWeight: 'bold',
-    color: '#64748b',
+    color: '#334155',
     marginTop: verticalScale(16),
     marginBottom: verticalScale(4),
   },
@@ -421,17 +393,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: moderateScale(40),
   },
-  // Task Card
   taskCard: {
     backgroundColor: '#ffffff',
-    borderRadius: moderateScale(16),
+    borderRadius: moderateScale(14),
     padding: moderateScale(16),
     marginBottom: verticalScale(12),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   taskHeader: {
     flexDirection: 'row',
@@ -469,14 +437,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(4),
     borderRadius: moderateScale(8),
+    borderWidth: 1,
   },
   priorityText: {
     fontSize: moderateScale(10),
     fontWeight: 'bold',
-    color: '#ffffff',
     letterSpacing: 0.3,
   },
-  // Location
   taskLocation: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,7 +455,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     flex: 1,
   },
-  // Task Details
   taskDetails: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -517,9 +483,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: 0.3,
   },
-  // Fill Level Bar
   fillLevelBar: {
-    height: verticalScale(6),
+    height: verticalScale(5),
     backgroundColor: '#e2e8f0',
     borderRadius: moderateScale(3),
     overflow: 'hidden',
@@ -529,7 +494,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: moderateScale(3),
   },
-  // Action Buttons
   taskActions: {
     flexDirection: 'row',
     gap: moderateScale(8),
@@ -539,17 +503,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#ecfdf5',
     paddingVertical: verticalScale(10),
     borderRadius: moderateScale(10),
     gap: moderateScale(6),
     borderWidth: 1,
-    borderColor: '#3b82f6',
+    borderColor: '#d1fae5',
   },
   startButtonText: {
     fontSize: moderateScale(13),
     fontWeight: '600',
-    color: '#3b82f6',
+    color: '#047857',
   },
   completeButton: {
     flex: 1,

@@ -35,7 +35,7 @@ export default function WorkAreasTab({ tasks }) {
     <View style={styles.container}>
       {/* Modern Header with Gradient */}
       <LinearGradient
-        colors={['#10b981', '#059669']}
+        colors={['#047857', '#065f46']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.header}
@@ -132,8 +132,8 @@ export default function WorkAreasTab({ tasks }) {
               </View>
 
               <View style={styles.coverageItem}>
-                <View style={[styles.coverageIcon, { backgroundColor: '#fef3c7' }]}>
-                  <Ionicons name="time" size={moderateScale(32)} color="#f59e0b" />
+                <View style={[styles.coverageIcon, { backgroundColor: '#ecfdf5' }]}>
+                  <Ionicons name="time" size={moderateScale(32)} color="#0d9488" />
                 </View>
                 <View style={styles.coverageInfo}>
                   <Text style={styles.coverageValue}>{stats.inProgress}</Text>
@@ -169,7 +169,7 @@ export default function WorkAreasTab({ tasks }) {
                 }]} />
                 <View style={[styles.progressSegment, {
                   flex: stats.inProgress,
-                  backgroundColor: '#f59e0b'
+                  backgroundColor: '#0d9488'
                 }]} />
                 <View style={[styles.progressSegment, {
                   flex: stats.pending,
@@ -183,7 +183,7 @@ export default function WorkAreasTab({ tasks }) {
                   <Text style={styles.legendText}>Completed ({stats.completed})</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: '#0d9488' }]} />
                   <Text style={styles.legendText}>In Progress ({stats.inProgress})</Text>
                 </View>
                 <View style={styles.legendItem}>
@@ -217,7 +217,7 @@ export default function WorkAreasTab({ tasks }) {
 
                 <View style={styles.insightItem}>
                   <LinearGradient
-                    colors={['#3b82f6', '#2563eb']}
+                    colors={['#059669', '#047857']}
                     style={styles.insightBadge}
                   >
                     <Ionicons name="checkmark-done" size={moderateScale(24)} color="white" />
@@ -228,7 +228,7 @@ export default function WorkAreasTab({ tasks }) {
 
                 <View style={styles.insightItem}>
                   <LinearGradient
-                    colors={['#f59e0b', '#d97706']}
+                    colors={['#0d9488', '#0f766e']}
                     style={styles.insightBadge}
                   >
                     <Ionicons name="flash" size={moderateScale(24)} color="white" />
@@ -336,11 +336,8 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(16),
     padding: moderateScale(16),
     marginBottom: moderateScale(16),
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -434,11 +431,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(28),
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   insightLabel: {
     fontSize: moderateScale(12),

@@ -358,7 +358,7 @@ export default function HomeScreen() {
       >
         {/* Modern Header with Gradient */}
         <LinearGradient
-          colors={['#10b981', '#059669']}
+          colors={['#047857', '#065f46']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.modernHeader, { paddingTop: (insets?.top || 0) + moderateScale(16) }]}
@@ -459,7 +459,7 @@ export default function HomeScreen() {
 
               <View style={styles.progressStatItem}>
                 <LinearGradient
-                  colors={['#f59e0b', '#d97706']}
+                  colors={['#0d9488', '#0f766e']}
                   style={styles.progressStatIcon}
                 >
                   <Ionicons name="time" size={moderateScale(24)} color="white" />
@@ -505,11 +505,11 @@ export default function HomeScreen() {
                 return (
                   <View key={task.id} style={styles.modernTaskCard}>
                     <View style={styles.taskCardLeft}>
-                      <View style={[styles.taskIconContainer, { backgroundColor: isServiceRequest ? '#f3e8ff' : '#f0fdf4' }]}>
-                        <Ionicons 
-                          name={isServiceRequest ? "document-text" : "trash"} 
-                          size={moderateScale(20)} 
-                          color={isServiceRequest ? '#8b5cf6' : '#10b981'} 
+                      <View style={[styles.taskIconContainer, { backgroundColor: '#ecfdf5' }]}>
+                        <Ionicons
+                          name={isServiceRequest ? "document-text" : "trash"}
+                          size={moderateScale(20)}
+                          color={isServiceRequest ? '#047857' : '#10b981'}
                         />
                       </View>
                       <View style={styles.taskCardContent}>
@@ -518,10 +518,10 @@ export default function HomeScreen() {
                             {isServiceRequest ? 'REQ' : 'Bin'} #{task.bin_id || task.binId}
                           </Text>
                           <View style={[styles.taskStatusBadge, {
-                            backgroundColor: task.priority === 'high' ? '#fef2f2' : '#fef9c3'
+                            backgroundColor: task.priority === 'high' ? '#fef2f2' : '#ecfdf5',
                           }]}>
                             <Text style={[styles.taskStatusText, {
-                              color: task.priority === 'high' ? '#dc2626' : '#ca8a04'
+                              color: task.priority === 'high' ? '#dc2626' : '#047857'
                             }]}>
                               {task.priority === 'high' ? 'URGENT' : 'NORMAL'}
                             </Text>
@@ -554,7 +554,7 @@ export default function HomeScreen() {
           <View style={styles.vehicleSection}>
             <Text style={styles.vehicleSectionTitle}>Assigned Vehicle</Text>
             <LinearGradient
-              colors={['#1e293b', '#334155']}
+              colors={['#065f46', '#047857']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.modernVehicleCard}

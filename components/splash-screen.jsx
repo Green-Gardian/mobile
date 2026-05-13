@@ -40,7 +40,7 @@ export default function SplashScreen({ onFinish }) {
 
   return (
     <LinearGradient
-      colors={['#6d28d9', '#8b5cf6', '#a855f7']}
+      colors={['#047857', '#059669', '#10b981']}
       style={styles.container}
     >
       <Animated.View
