@@ -24,7 +24,7 @@ import { ResidentAPI } from '../../services/residentAPI';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadToCloudinary } from '../../utils/cloudinary';
 import { Image } from 'expo-image';
-import { AuthAPI } from '../../services/api';
+import { AuthAPI, api } from '../../services/api';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import * as OTPAuth from 'otpauth';
@@ -94,6 +94,10 @@ export default function ProfileScreen() {
     confirmNewPassword: '',
   });
   const [changingPassword, setChangingPassword] = useState(false);
+
+  const [showEditInfoModal, setShowEditInfoModal] = useState(false);
+  const [editInfoForm, setEditInfoForm] = useState({ first_name: '', last_name: '', phone_number: '' });
+  const [savingInfo, setSavingInfo] = useState(false);
 
   const pickImage = async () => {
     try {
@@ -484,6 +488,40 @@ export default function ProfileScreen() {
     }
   };
 
+  const openEditInfoModal = () => {
+    setEditInfoForm({
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      phone_number: profile.phone_number,
+    });
+    setShowEditInfoModal(true);
+  };
+
+  const submitEditInfo = async () => {
+    const { first_name, last_name, phone_number } = editInfoForm;
+    if (!first_name.trim() || !last_name.trim() || !phone_number.trim()) {
+      Alert.alert('Validation Error', 'All fields are required');
+      return;
+    }
+    try {
+      setSavingInfo(true);
+      await api.put('/auth/update-profile', {
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        phone_number: phone_number.trim(),
+        email: profile.email,
+        profile_picture: profile.profile_picture || null,
+      });
+      setProfile(prev => ({ ...prev, first_name: first_name.trim(), last_name: last_name.trim(), phone_number: phone_number.trim() }));
+      setShowEditInfoModal(false);
+      Alert.alert('Success', 'Profile updated!');
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSavingInfo(false);
+    }
+  };
+
   const handleToggleMfa = async () => {
     if (mfaStatus?.mfaEnabled) {
       if (!mfaStatus.canDisable) {
@@ -591,21 +629,23 @@ export default function ProfileScreen() {
           style={[styles.profileHeader, { paddingTop: insets.top + 20 }]}
         >
           <View style={styles.headerContent}>
-            <View style={styles.avatarWrapper}>
-              {profile.profile_picture ? (
-                <Image
-                  source={{ uri: profile.profile_picture }}
-                  style={styles.avatarImage}
-                  contentFit="cover"
-                  transition={200}
-                />
-              ) : (
-                <Text style={styles.avatarText}>
-                  {profile.first_name?.[0]}{profile.last_name?.[0]}
-                </Text>
-              )}
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatarWrapper}>
+                {profile.profile_picture ? (
+                  <Image
+                    source={{ uri: profile.profile_picture }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {profile.first_name?.[0]}{profile.last_name?.[0]}
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity style={styles.editAvatarBtn} onPress={pickImage}>
-                <Ionicons name="camera" size={16} color="white" />
+                <Ionicons name="camera" size={14} color="white" />
               </TouchableOpacity>
             </View>
             <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
@@ -661,6 +701,10 @@ export default function ProfileScreen() {
           <View style={styles.sectionHeader}>
             <Ionicons name="person-outline" size={24} color="#10b981" />
             <Text style={styles.sectionTitle}>Profile Information</Text>
+            <TouchableOpacity style={styles.editInfoBtn} onPress={openEditInfoModal}>
+              <Ionicons name="create-outline" size={18} color="#047857" />
+              <Text style={styles.editInfoBtnText}>Edit</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Read-only user info */}
@@ -676,7 +720,7 @@ export default function ProfileScreen() {
 
           <View style={styles.infoCard}>
             <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={styles.infoValue}>{profile.phone_number}</Text>
+            <Text style={styles.infoValue}>{profile.phone_number || '—'}</Text>
           </View>
 
 
@@ -853,6 +897,65 @@ export default function ProfileScreen() {
         </>
       )}
     </ScrollView>
+
+      {/* Edit Name/Phone Modal */}
+      <Modal
+        visible={showEditInfoModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditInfoModal(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowEditInfoModal(false)}>
+                <Text style={styles.cancelButton}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity onPress={submitEditInfo} disabled={savingInfo}>
+                {savingInfo ? (
+                  <ActivityIndicator size="small" color="#10b981" />
+                ) : (
+                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>First Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editInfoForm.first_name}
+                  onChangeText={(t) => setEditInfoForm(p => ({ ...p, first_name: t }))}
+                  placeholder="First name"
+                  autoCapitalize="words"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Last Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editInfoForm.last_name}
+                  onChangeText={(t) => setEditInfoForm(p => ({ ...p, last_name: t }))}
+                  placeholder="Last name"
+                  autoCapitalize="words"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Phone Number *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editInfoForm.phone_number}
+                  onChangeText={(t) => setEditInfoForm(p => ({ ...p, phone_number: t }))}
+                  placeholder="e.g. 03001234567"
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={styles.bottomSpacing} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
 
       {/* Privacy & Security Modal */}
       <Modal
@@ -1213,6 +1316,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  avatarContainer: {
+    width: 90,
+    height: 90,
+    marginBottom: 12,
+    position: 'relative',
+  },
   avatarWrapper: {
     width: 90,
     height: 90,
@@ -1222,9 +1331,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.4)',
-    marginBottom: 12,
-    position: 'relative',
-    overflow: 'hidden', // Ensure image respects border radius
+    overflow: 'hidden',
   },
   avatarImage: {
     width: '100%',
@@ -1237,21 +1344,22 @@ const styles = StyleSheet.create({
   },
   editAvatarBtn: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
+    bottom: 0,
+    right: 0,
     backgroundColor: '#047857',
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#ffffff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
+    zIndex: 10,
   },
   profileName: {
     fontSize: 22,
@@ -1474,6 +1582,22 @@ const styles = StyleSheet.create({
   actionTextContainer: { flex: 1 },
   actionTitle: { fontSize: 16, fontWeight: '600', color: '#1e293b', marginBottom: 2 },
   actionSubtitle: { fontSize: 12, color: '#64748b' },
+  editInfoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+  },
+  editInfoBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#047857',
+  },
   mfaBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   mfaBadgeText: { fontSize: 13, fontWeight: '700' },
   qrContainer: { backgroundColor: '#f8fafc', padding: 20, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#f1f5f9' },

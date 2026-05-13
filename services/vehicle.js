@@ -1,36 +1,11 @@
-import axios from 'axios';
-import { getAccessToken } from './api';
+import { api } from './api';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-// Create vehicle API instance
-const vehicleApi = axios.create({
-  baseURL: API_BASE_URL + '/vehicle',
-  timeout: 15000,
-});
-
-// Attach Authorization header
-vehicleApi.interceptors.request.use(async (config) => {
-  const token = await getAccessToken();
-  console.log('Vehicle API request:', config.url, 'Token:', !!token);
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Add response interceptor for debugging
-vehicleApi.interceptors.response.use(
-  (response) => {
-    console.log('Vehicle API response:', response.config.url, response.status, response.data);
-    return response;
-  },
-  (error) => {
-    console.error('Vehicle API error:', error.config?.url, error.response?.status, error.response?.data);
-    return Promise.reject(error);
-  }
-);
+const vehicleApi = {
+  get: (url, config) => api.get('/vehicle' + url, config),
+  post: (url, data, config) => api.post('/vehicle' + url, data, config),
+  put: (url, data, config) => api.put('/vehicle' + url, data, config),
+  delete: (url, config) => api.delete('/vehicle' + url, config),
+};
 
 export const VehicleAPI = {
   // Get vehicles assigned to driver

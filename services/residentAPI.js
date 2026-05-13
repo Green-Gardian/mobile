@@ -1,44 +1,32 @@
-import { getAccessToken } from '../services/api';
+import { api } from '../services/api';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL;
-const BASE_URL = `${API_BASE}/services`;
+const BASE_URL = '/services';
 
 // Generic API call function with error handling
 const apiCall = async (endpoint, options = {}) => {
+  const { silentError, body, headers, method = 'GET', ...rest } = options;
   try {
-    const token = await getAccessToken();
-
-    if (!token) {
-      throw new Error('No access token available');
-    }
-
     console.log(`[API] Calling: ${BASE_URL}${endpoint}`);
-    if (options.body) {
-      console.log('[API] Request body:', options.body);
-    }
+    if (body) console.log('[API] Request body:', body);
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options.headers,
-      },
-      ...options,
-    });
+    const config = {
+      method,
+      url: `${BASE_URL}${endpoint}`,
+      headers,
+      ...rest,
+    };
+    if (body) config.data = typeof body === 'string' ? JSON.parse(body) : body;
 
-    const data = await response.json();
-    console.log(`[API] Response from ${endpoint}:`, data);
-
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return data;
+    const response = await api(config);
+    console.log(`[API] Response from ${endpoint}:`, response.data);
+    return response.data;
   } catch (error) {
-    if (!options.silentError) {
+    if (!silentError) {
       console.error(`[API] Error for ${endpoint}:`, error);
     }
-    throw error;
+    throw error.response?.data?.message
+      ? new Error(error.response.data.message)
+      : error;
   }
 };
 

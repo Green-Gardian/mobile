@@ -1,33 +1,11 @@
-import axios from 'axios';
-import { getAccessToken } from './api';
+import { api } from './api';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-const driverApi = axios.create({
-  baseURL: API_BASE_URL + '/driver',
-  timeout: 15000,
-});
-
-driverApi.interceptors.request.use(async (config) => {
-  const token = await getAccessToken();
-  console.log('Driver API request:', config.url, 'Token:', !!token);
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-driverApi.interceptors.response.use(
-  (response) => {
-    console.log('Driver API response:', response.config.url, response.status, response.data);
-    return response;
-  },
-  (error) => {
-    console.error('Driver API error:', error.config?.url, error.response?.status, error.response?.data);
-    return Promise.reject(error);
-  }
-);
+const driverApi = {
+  get: (url, config) => api.get('/driver' + url, config),
+  post: (url, data, config) => api.post('/driver' + url, data, config),
+  put: (url, data, config) => api.put('/driver' + url, data, config),
+  delete: (url, config) => api.delete('/driver' + url, config),
+};
 
 export const DriverAPI = {
   // Get driver profile information

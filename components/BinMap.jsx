@@ -1,7 +1,18 @@
 import { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
+
+let MapView, Marker, Polyline;
+let mapsAvailable = false;
+try {
+    const maps = require('react-native-maps');
+    MapView = maps.default;
+    Marker = maps.Marker;
+    Polyline = maps.Polyline;
+    mapsAvailable = true;
+} catch (_) {
+    // react-native-maps requires a development build, not available in Expo Go
+}
 import { Ionicons } from '@expo/vector-icons';
 import { DriverAPI } from '../services/driver';
 import { useSocket } from '../context/SocketContext';
@@ -142,6 +153,15 @@ export default function BinMap({ height: mapHeight, style, showControls = true, 
     const markersToRender = [...binMarkers, ...taskMarkers];
 
     const mapStyle = style ? style : { height: mapHeight || 300, width: '100%' };
+
+    if (!mapsAvailable) {
+        return (
+            <View style={[styles.container, mapStyle, styles.fallback]}>
+                <Text style={styles.fallbackText}>Map unavailable in Expo Go</Text>
+                <Text style={styles.fallbackSub}>Use a development build to enable maps</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={[styles.container, mapStyle]}>
@@ -410,5 +430,20 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: '600',
         color: '#475569'
-    }
+    },
+    fallback: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f1f5f9',
+    },
+    fallbackText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#475569',
+        marginBottom: 4,
+    },
+    fallbackSub: {
+        fontSize: 12,
+        color: '#94a3b8',
+    },
 });
