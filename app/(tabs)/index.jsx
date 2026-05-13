@@ -16,7 +16,17 @@ import { ResidentAPI, ServiceRequestUtils } from '../../services/residentAPI';
 import { VehicleAPI } from '../../services/vehicle';
 import BinMap from '../../components/BinMap';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+
+// Responsive breakpoints
+const isSmallDevice = width < 360;
+const isMediumDevice = width >= 360 && width < 400;
+const isLargeDevice = width >= 400;
+
+// Responsive sizing helper
+const scale = (size) => (width / 375) * size;
+const verticalScale = (size) => (height / 812) * size;
+const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
 
 import * as Location from 'expo-location';
 import { useSocket } from '../../context/SocketContext';
@@ -335,142 +345,154 @@ export default function HomeScreen() {
     return (
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: verticalScale(100) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#6d28d9']}
-            tintColor="#6d28d9"
+            colors={['#10b981']}
+            tintColor="#10b981"
           />
         }
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: (insets?.top || 0) + 12 }]}>
-          <Text style={styles.headerTitle}>Driver Dashboard</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.headerBtn}
-              onPress={() => router.push('/chat/list')}
-            >
-              <Ionicons name="chatbubbles-outline" size={24} color="#6d28d9" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerBtn}>
-              <Ionicons name="notifications-outline" size={24} color="#6d28d9" />
-            </TouchableOpacity>
+        {/* Modern Header with Profile */}
+        <View style={[styles.modernHeader, { paddingTop: (insets?.top || 0) + 16 }]}>
+          <View style={styles.headerLeft}>
+            <View style={styles.profileImageContainer}>
+              {driverData.profile_picture ? (
+                <Image
+                  source={{ uri: driverData.profile_picture }}
+                  style={styles.profileImage}
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Text style={styles.profileImageText}>
+                    {driverData.name.split(' ').map(n => n[0]).join('')}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.greetingText}>Hello, {driverData.name.split(' ')[0]} 👋</Text>
+              <Text style={styles.subtitleText}>Eco-Guardian On Duty</Text>
+            </View>
           </View>
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons name="notifications-outline" size={24} color="#1e293b" />
+            <View style={styles.notificationBadge} />
+          </TouchableOpacity>
         </View>
 
-
-
-        {/* Welcome Card */}
-        <View style={styles.welcomeCard}>
+        {/* Progress Card - Inspired by reference */}
+        <View style={styles.progressCardContainer}>
           <LinearGradient
-            colors={['#6d28d9', '#8b5cf6']}
-            style={styles.welcomeGradient}
+            colors={['#10b981', '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.progressCard}
           >
-            {/* ... rest of welcome card ... */}
-            {/* Status Badge - Top Right Corner */}
-            <View style={styles.statusBadgeCorner}>
-              <Text style={styles.statusText}>{driverData.status.toUpperCase()}</Text>
-            </View>
-
-            <View style={styles.welcomeContent}>
-              <View style={styles.profileSection}>
-                <View style={styles.avatar}>
-                  {driverData.profile_picture ? (
-                    <Image
-                      source={{ uri: driverData.profile_picture }}
-                      style={styles.avatarImage}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                  ) : (
-                    <Text style={styles.avatarText}>{driverData.name.split(' ').map(n => n[0]).join('')}</Text>
-                  )}
-                </View>
-                <View style={styles.profileInfo}>
-                  <Text style={styles.welcomeText}>Welcome back!</Text>
-                  <Text style={styles.driverName}>{driverData.name}</Text>
-                  <Text style={styles.driverId}>ID: {driverData.id}</Text>
-                </View>
+            <View style={styles.progressLeft}>
+              <View style={styles.circularProgress}>
+                <Text style={styles.progressNumber}>{driverData.todayCollections}</Text>
+                <Text style={styles.progressTotal}>/{currentTasks.length + driverData.todayCollections}</Text>
               </View>
+            </View>
+            <View style={styles.progressRight}>
+              <View style={styles.statusBadgeInline}>
+                <Text style={styles.statusBadgeText}>ON DUTY</Text>
+              </View>
+              <Text style={styles.progressTitle}>Today's{'\n'}Progress</Text>
+              <Text style={styles.progressSubtitle}>
+                {driverData.todayCollections}/{currentTasks.length + driverData.todayCollections} collections done
+              </Text>
             </View>
           </LinearGradient>
         </View>
 
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.todayCollections}</Text>
-            <Text style={styles.statLabel}>Today Collections</Text>
+        {/* Stats Grid - 3 columns like reference */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statItem}>
+            <View style={[styles.statIconCircle, { backgroundColor: '#dcfce7' }]}>
+              <Ionicons name="leaf" size={24} color="#10b981" />
+            </View>
+            <Text style={styles.statValue}>{driverData.totalCollections}</Text>
+            <Text style={styles.statLabel}>Total</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.totalCollections}</Text>
-            <Text style={styles.statLabel}>Total Collections</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.rating}</Text>
+          <View style={styles.statItem}>
+            <View style={[styles.statIconCircle, { backgroundColor: '#fef3c7' }]}>
+              <Ionicons name="star" size={24} color="#f59e0b" />
+            </View>
+            <Text style={styles.statValue}>{driverData.rating}</Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{driverData.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
+          <View style={styles.statItem}>
+            <View style={[styles.statIconCircle, { backgroundColor: '#dbeafe' }]}>
+              <Ionicons name="time" size={24} color="#3b82f6" />
+            </View>
+            <Text style={styles.statValue}>{currentTasks.length}</Text>
+            <Text style={styles.statLabel}>Today</Text>
           </View>
         </View>
 
-        {/* Current Tasks */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Current Tasks</Text>
-            <View style={styles.sectionHeaderRight}>
-              <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-                <Ionicons name="refresh-outline" size={20} color="#6d28d9" />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
-            </View>
+        {/* Current Tasks Section */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitleText}>Current Tasks</Text>
+            <TouchableOpacity onPress={() => setActiveTab('tasks')}>
+              <Text style={styles.viewAllLink}>View All</Text>
+            </TouchableOpacity>
           </View>
+
           {currentTasks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="checkmark-done-circle-outline" size={48} color="#cbd5e1" />
-              <Text style={styles.emptyStateText}>No active tasks</Text>
-              <Text style={styles.emptyStateSubtext}>Tasks will appear here when bins need collection</Text>
+            <View style={styles.emptyTasksContainer}>
+              <Ionicons name="checkmark-done-circle-outline" size={56} color="#cbd5e1" />
+              <Text style={styles.emptyTasksTitle}>No active tasks</Text>
+              <Text style={styles.emptyTasksSubtitle}>Tasks will appear here when bins need collection</Text>
             </View>
           ) : (
-            currentTasks.map((task) => {
+            currentTasks.slice(0, 3).map((task) => {
               const isServiceRequest = task.task_type === 'service_request' || task.origin === 'service_request';
               return (
-                <View key={task.id} style={styles.taskCard}>
-                  <View style={styles.taskHeader}>
-                    <Text style={styles.binId}>{isServiceRequest ? 'REQ' : 'BIN'}: {task.bin_id || task.binId}</Text>
-                    <View style={[styles.priorityBadge, { backgroundColor: isServiceRequest ? '#8b5cf6' : (task.priority === 'high' ? '#ef4444' : '#f59e0b') }]}>
-                      <Text style={styles.priorityText}>{task.priority.toUpperCase()}</Text>
+                <View key={task.id} style={styles.modernTaskCard}>
+                  <View style={styles.taskCardLeft}>
+                    <View style={[styles.taskIconContainer, { backgroundColor: isServiceRequest ? '#f3e8ff' : '#f0fdf4' }]}>
+                      <Ionicons
+                        name={isServiceRequest ? "document-text" : "trash"}
+                        size={24}
+                        color={isServiceRequest ? '#8b5cf6' : '#10b981'}
+                      />
                     </View>
                   </View>
-                  <Text style={styles.taskLocation}>{task.location?.address || task.location || 'Location not available'}</Text>
-                  {isServiceRequest && task.title && <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{task.title}</Text>}
-                  <View style={styles.taskFooter}>
-                    <View style={styles.fillLevelContainer}>
-                      <Text style={styles.fillLevelText}>
-                        {isServiceRequest ? `Est. Weight: ${task.fill_level || 0}kg` : `Fill Level: ${task.fill_level || 0}%`}
+                  <View style={styles.taskCardCenter}>
+                    <View style={styles.taskCardHeader}>
+                      <Text style={styles.taskBinId} numberOfLines={1}>
+                        {isServiceRequest ? 'REQ' : 'Bin'} #{task.bin_id || task.binId}
                       </Text>
-                      {!isServiceRequest && (
-                        <View style={styles.fillLevelBar}>
-                          <View style={[styles.fillLevelProgress, { width: `${task.fill_level || task.fillLevel || 0}%` }]} />
-                        </View>
-                      )}
+                      <View style={[styles.taskStatusBadge, {
+                        backgroundColor: task.priority === 'high' ? '#fef2f2' : '#fef9c3'
+                      }]}>
+                        <Text style={[styles.taskStatusText, {
+                          color: task.priority === 'high' ? '#dc2626' : '#ca8a04'
+                        }]}>
+                          {task.priority === 'high' ? 'PENDING' : 'PENDING'}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.estimatedTime}>{task.estimated_time || task.estimatedTime || 'N/A'}</Text>
+                    <Text style={styles.taskLocationText} numberOfLines={1}>
+                      {task.location?.address || task.location || 'Location not available'}
+                    </Text>
+                    {task.estimated_time && (
+                      <Text style={styles.taskDistanceText}>{task.estimated_time}</Text>
+                    )}
                   </View>
-
-                  {/* Complete Task Button */}
                   <TouchableOpacity
-                    style={styles.completeTaskBtn}
+                    style={styles.taskNavigateButton}
                     onPress={() => setCompletingTask(task)}
                   >
-                    <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                    <Text style={styles.completeTaskBtnText}>Complete Task</Text>
+                    <Ionicons name="navigate" size={20} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
               );
@@ -478,17 +500,25 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Vehicle Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
-          <View style={styles.vehicleCard}>
-            <View style={styles.vehicleHeader}>
-              <Text style={styles.vehiclePlate}>{vehicleData?.plateNo || 'N/A'}</Text>
-              <View style={[styles.vehicleStatusBadge, { backgroundColor: '#10b981' }]}>
-                <Text style={styles.vehicleStatusText}>{(vehicleData?.status || 'active').toUpperCase()}</Text>
-              </View>
+        {/* Impact Section - Like reference */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitleText}>Impact</Text>
+          <View style={styles.impactCard}>
+            <View style={styles.impactLeft}>
+              <Text style={styles.impactValue}>2.4 Tons CO2 Saved</Text>
+              <Text style={styles.impactSubtext}>Environmental contribution this month</Text>
             </View>
-            <Text style={styles.vehicleModel}>{vehicleData?.model || 'Vehicle Model'}</Text>
+            <View style={styles.impactChart}>
+              {[40, 55, 45, 70, 85].map((height, index) => (
+                <View
+                  key={index}
+                  style={[styles.impactBar, {
+                    height: `${height}%`,
+                    backgroundColor: index === 4 ? '#10b981' : '#d1fae5'
+                  }]}
+                />
+              ))}
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -745,9 +775,9 @@ export default function HomeScreen() {
       {isDriver && (
         <View style={styles.bottomTabContainer}>
           {[
-            { key: 'overview', label: 'Overview', icon: 'analytics-outline' },
+            { key: 'overview', label: 'Overview', icon: 'grid-outline' },
             { key: 'tasks', label: 'Tasks', icon: 'list-outline' },
-            { key: 'workareas', label: 'Work Areas', icon: 'map-outline' },
+            { key: 'workareas', label: 'Map', icon: 'map-outline' },
             { key: 'performance', label: 'Performance', icon: 'trending-up-outline' },
             { key: 'profile', label: 'Profile', icon: 'person-outline' }
           ].map((tab) => (
@@ -759,8 +789,8 @@ export default function HomeScreen() {
               <View style={[styles.tabIconContainer, activeTab === tab.key && styles.activeTabIconContainer]}>
                 <Ionicons
                   name={tab.icon}
-                  size={20}
-                  color={activeTab === tab.key ? '#6d28d9' : '#a78bfa'}
+                  size={22}
+                  color={activeTab === tab.key ? '#10b981' : '#94a3b8'}
                 />
               </View>
               <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
@@ -905,7 +935,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e9d5ff',
+    borderTopColor: '#d1fae5',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   bottomTab: {
     alignItems: 'center',
@@ -913,24 +948,24 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   tabIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
   activeTabIconContainer: {
-    backgroundColor: '#ede9fe',
+    backgroundColor: '#d1fae5',
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#a78bfa',
+    color: '#94a3b8',
     textAlign: 'center',
   },
   activeTabLabel: {
-    color: '#6d28d9',
+    color: '#10b981',
     fontWeight: '700',
   },
   content: {
@@ -1444,5 +1479,328 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 2
-  }
+  },
+  // Modern Driver UI Styles
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  modernHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(20),
+    paddingBottom: verticalScale(16),
+    backgroundColor: '#f8fafc',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileImageContainer: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
+    marginRight: moderateScale(12),
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e0e7ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageText: {
+    fontSize: moderateScale(18),
+    fontWeight: 'bold',
+    color: '#6366f1',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: verticalScale(2),
+  },
+  subtitleText: {
+    fontSize: moderateScale(13),
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  notificationButton: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(22),
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: moderateScale(10),
+    right: moderateScale(10),
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
+    backgroundColor: '#ef4444',
+  },
+  progressCardContainer: {
+    marginHorizontal: moderateScale(20),
+    marginBottom: verticalScale(20),
+  },
+  progressCard: {
+    borderRadius: moderateScale(20),
+    padding: moderateScale(20),
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    minHeight: verticalScale(140),
+  },
+  progressLeft: {
+    marginRight: moderateScale(20),
+  },
+  circularProgress: {
+    width: moderateScale(80),
+    height: moderateScale(80),
+    borderRadius: moderateScale(40),
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 6,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressNumber: {
+    fontSize: moderateScale(32),
+    fontWeight: 'bold',
+    color: '#ffffff',
+    lineHeight: moderateScale(36),
+  },
+  progressTotal: {
+    fontSize: moderateScale(14),
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+  },
+  progressRight: {
+    flex: 1,
+  },
+  statusBadgeInline: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(12),
+    alignSelf: 'flex-start',
+    marginBottom: verticalScale(8),
+  },
+  statusBadgeText: {
+    fontSize: moderateScale(10),
+    fontWeight: 'bold',
+    color: '#ffffff',
+    letterSpacing: 0.5,
+  },
+  progressTitle: {
+    fontSize: moderateScale(24),
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: verticalScale(4),
+    lineHeight: moderateScale(28),
+  },
+  progressSubtitle: {
+    fontSize: moderateScale(13),
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: moderateScale(20),
+    marginBottom: verticalScale(24),
+  },
+  statItem: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    alignItems: 'center',
+    marginHorizontal: moderateScale(4),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  statIconCircle: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(8),
+  },
+  statValue: {
+    fontSize: moderateScale(24),
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: verticalScale(2),
+  },
+  sectionContainer: {
+    marginHorizontal: moderateScale(20),
+    marginBottom: verticalScale(24),
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: verticalScale(16),
+  },
+  sectionTitleText: {
+    fontSize: moderateScale(20),
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  viewAllLink: {
+    fontSize: moderateScale(14),
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  modernTaskCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: verticalScale(12),
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  taskCardLeft: {
+    marginRight: moderateScale(12),
+  },
+  taskIconContainer: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  taskCardCenter: {
+    flex: 1,
+  },
+  taskCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: verticalScale(4),
+  },
+  taskBinId: {
+    fontSize: moderateScale(16),
+    fontWeight: 'bold',
+    color: '#1e293b',
+    flex: 1,
+  },
+  taskStatusBadge: {
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(4),
+    borderRadius: moderateScale(8),
+  },
+  taskStatusText: {
+    fontSize: moderateScale(10),
+    fontWeight: 'bold',
+    letterSpacing: 0.3,
+  },
+  taskLocationText: {
+    fontSize: moderateScale(13),
+    color: '#64748b',
+    marginBottom: verticalScale(2),
+  },
+  taskDistanceText: {
+    fontSize: moderateScale(12),
+    color: '#94a3b8',
+  },
+  taskNavigateButton: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: moderateScale(8),
+  },
+  emptyTasksContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(32),
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+  },
+  emptyTasksTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: '600',
+    color: '#64748b',
+    marginTop: verticalScale(12),
+  },
+  emptyTasksSubtitle: {
+    fontSize: moderateScale(13),
+    color: '#94a3b8',
+    marginTop: verticalScale(4),
+    textAlign: 'center',
+  },
+  impactCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(16),
+    padding: moderateScale(20),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+  },
+  impactLeft: {
+    flex: 1,
+  },
+  impactValue: {
+    fontSize: moderateScale(20),
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: verticalScale(4),
+  },
+  impactSubtext: {
+    fontSize: moderateScale(12),
+    color: '#64748b',
+  },
+  impactChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: verticalScale(60),
+    gap: moderateScale(6),
+  },
+  impactBar: {
+    width: moderateScale(12),
+    borderRadius: moderateScale(6),
+  },
 });
