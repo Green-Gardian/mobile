@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const { signOut, state } = useAuth();
   const navigation = useNavigation();
   const router = useRouter();
-  const socket = useSocket();
+  const { socket } = useSocket();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -106,6 +106,7 @@ export default function HomeScreen() {
   // Driver-specific state
   const [driverData, setDriverData] = useState(null);
   const [currentTasks, setCurrentTasks] = useState([]);
+  const [completedCount, setCompletedCount] = useState(0);
   const [vehicleData, setVehicleData] = useState(null);
   const [loading, setLoading] = useState(isDriver); // Only loading for drivers
   const [refreshing, setRefreshing] = useState(false);
@@ -202,7 +203,13 @@ export default function HomeScreen() {
       console.log('Tasks response:', tasksResponse.data);
 
       if (tasksResponse.data.tasks) {
-        setCurrentTasks(tasksResponse.data.tasks);
+        const tasks = tasksResponse.data.tasks;
+        setCurrentTasks(tasks);
+        // Debug: log actual location structure
+        tasks.slice(0, 2).forEach((t, i) => {
+          console.log(`[Task ${i}] location:`, JSON.stringify(t.location));
+          console.log(`[Task ${i}] resident:`, JSON.stringify(t.resident));
+        });
       } else {
         setCurrentTasks([]);
       }
@@ -528,10 +535,10 @@ export default function HomeScreen() {
                           </View>
                         </View>
                         <Text style={styles.taskLocationText} numberOfLines={1}>
-                          {task.location?.address || 
-                           (task.location?.lat && task.location?.lng 
-                             ? `${task.location.lat.toFixed(4)}, ${task.location.lng.toFixed(4)}` 
-                             : 'Location not available')}
+                          {task.location?.address
+                            || (task.location?.landmark ? `Near ${task.location.landmark}` : null)
+                            || (task.location?.lat ? `${parseFloat(task.location.lat).toFixed(4)}, ${parseFloat(task.location.lng).toFixed(4)}` : null)
+                            || 'Location not available'}
                         </Text>
                         {task.estimated_time && (
                           <Text style={styles.taskDistanceText}>{task.estimated_time}</Text>
@@ -786,8 +793,16 @@ export default function HomeScreen() {
     if (isDriver) {
       switch (activeTab) {
         case 'overview': return renderDriverOverview();
-        case 'tasks': return <TasksTab />;
-        case 'workareas': return <WorkAreasTab tasks={currentTasks} />;
+        case 'tasks': return (
+          <TasksTab
+            onTaskStatusChange={(isComplete) => {
+              if (isComplete) setCompletedCount(c => c + 1);
+              loadDriverData();
+            }}
+            onNavigateToMap={() => setActiveTab('workareas')}
+          />
+        );
+        case 'workareas': return <WorkAreasTab tasks={currentTasks} completedCount={completedCount} />;
         case 'performance': return <PerformanceTab />;
         case 'profile': return <ProfileTab />;
         default: return renderDriverOverview();

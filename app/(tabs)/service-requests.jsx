@@ -76,9 +76,20 @@ export default function ServiceRequestsScreen() {
     return days;
   }, [calendarMonth]);
 
+  const toLocalISO = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const selectCalendarDate = (date) => {
     if (!date) return;
-    const isoDate = date.toISOString().slice(0, 10);
+    if (date < today) return; // block past dates
+    const isoDate = toLocalISO(date);
     setRequestForm({ ...requestForm, preferredDate: isoDate });
     setFormErrors({ ...formErrors, preferredDate: undefined });
     setShowDatePicker(false);
@@ -616,8 +627,9 @@ export default function ServiceRequestsScreen() {
 
                       <View style={styles.calendarGrid}>
                         {calendarDays.map((day, index) => {
-                          const dateString = day ? day.toISOString().slice(0, 10) : '';
+                          const dateString = day ? toLocalISO(day) : '';
                           const isSelected = requestForm.preferredDate === dateString;
+                          const isPast = day && day < today;
                           return (
                             <TouchableOpacity
                               key={`${index}-${dateString}`}
@@ -625,11 +637,16 @@ export default function ServiceRequestsScreen() {
                                 styles.calendarDay,
                                 isSelected && styles.calendarDaySelected,
                                 !day && styles.calendarDayEmpty,
+                                isPast && styles.calendarDayPast,
                               ]}
-                              disabled={!day}
+                              disabled={!day || isPast}
                               onPress={() => selectCalendarDate(day)}
                             >
-                              <Text style={[styles.calendarDayText, isSelected && styles.calendarDayTextSelected]}>
+                              <Text style={[
+                                styles.calendarDayText,
+                                isSelected && styles.calendarDayTextSelected,
+                                isPast && styles.calendarDayTextPast,
+                              ]}>
                                 {day ? day.getDate() : ''}
                               </Text>
                             </TouchableOpacity>
@@ -1229,6 +1246,13 @@ const styles = StyleSheet.create({
   },
   calendarDayTextSelected: {
     color: '#166534',
+    fontWeight: '800',
+  },
+  calendarDayPast: {
+    opacity: 0.3,
+  },
+  calendarDayTextPast: {
+    color: '#94a3b8',
   },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfWidth: { width: '48%' },

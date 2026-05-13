@@ -1,17 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, AppState, Dimensions, ActivityIndicator, RefreshControl, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DriverAPI } from '../services/driver';
 
 const { width, height } = Dimensions.get('window');
-
 const scale = (size) => (width / 375) * size;
 const verticalScale = (size) => (height / 812) * size;
 const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
 
-export default function TasksTab() {
+export default function TasksTab({ onTaskStatusChange, onNavigateToMap }) {
   const [currentTasks, setCurrentTasks] = useState([]);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -23,33 +23,31 @@ export default function TasksTab() {
     loadTasks();
 
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (appState.current && appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      if (appState.current?.match(/inactive|background/) && nextAppState === 'active') {
         loadTasks();
       }
       appState.current = nextAppState;
     });
 
-    const interval = setInterval(() => {
-      loadTasks();
-    }, 30000);
+    const interval = setInterval(() => loadTasks(), 30000);
 
     return () => {
-      try { subscription.remove(); } catch (e) { /* ignore */ }
+      try { subscription.remove(); } catch (e) {}
       clearInterval(interval);
     };
   }, []);
 
   const loadTasks = async (isRefresh = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const response = await DriverAPI.getCurrentTasks();
       if (response.data.tasks) {
-        setCurrentTasks(response.data.tasks);
+        const fresh = response.data.tasks;
+        setCurrentTasks(fresh);
+        // Remove any locally-tracked completed tasks that might have been re-queued
+        setCompletedTasks(prev => prev.filter(ct => !fresh.find(t => t.id === ct.id)));
       }
     } catch (err) {
       console.error('Error loading tasks:', err);
@@ -61,20 +59,55 @@ export default function TasksTab() {
     }
   };
 
-  const onRefresh = () => {
-    loadTasks(true);
-  };
+  const openNavigation = (task) => {
+    const lat = task.location?.lat;
+    const lng = task.location?.lng;
+    const address = task.location?.address
+      || (task.location?.landmark ? task.location.landmark : null)
+      || (task.resident?.first_name ? `${task.title || 'task'} near ${task.resident?.city || ''}` : null);
 
-  const handleUpdateTaskStatus = async (taskId, newStatus) => {
-    try {
-      await DriverAPI.updateTaskStatus(taskId, { status: newStatus });
-      Alert.alert('Success', 'Task status updated successfully!');
-      loadTasks();
-    } catch (err) {
-      console.error('Error updating task status:', err);
-      Alert.alert('Error', 'Failed to update task status');
+    if (lat && lng) {
+      const url = Platform.OS === 'ios'
+        ? `maps://?daddr=${lat},${lng}&dirflg=d`
+        : `google.navigation:q=${lat},${lng}&mode=d`;
+      Linking.canOpenURL(url).then(supported => {
+        const fallback = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        Linking.openURL(supported ? url : fallback);
+      }).catch(() => {
+        Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`);
+      });
+    } else if (address) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`);
     }
   };
+
+  const handleStart = async (task) => {
+    try {
+      await DriverAPI.updateTaskStatus(task.id, { status: 'in_progress' });
+      setCurrentTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: 'in_progress' } : t));
+      onTaskStatusChange?.();
+      // Switch to in-app map — Leaflet will draw the route automatically
+      onNavigateToMap?.();
+    } catch (err) {
+      console.error('Error starting task:', err);
+    }
+  };
+
+  const handleComplete = async (task) => {
+    try {
+      await DriverAPI.updateTaskStatus(task.id, { status: 'completed' });
+      // Move to local completed — no dialog
+      setCurrentTasks(prev => prev.filter(t => t.id !== task.id));
+      setCompletedTasks(prev => [...prev, { ...task, status: 'completed' }]);
+      onTaskStatusChange?.(true);
+    } catch (err) {
+      console.error('Error completing task:', err);
+    }
+  };
+
+  const onRefresh = () => loadTasks(true);
+
+  const allTasks = [...currentTasks, ...completedTasks];
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -94,17 +127,17 @@ export default function TasksTab() {
     }
   };
 
-  const filteredTasks = currentTasks.filter(task => {
+  const taskCounts = {
+    all: allTasks.length,
+    pending: currentTasks.filter(t => t.status === 'pending').length,
+    in_progress: currentTasks.filter(t => t.status === 'in_progress').length,
+    completed: completedTasks.length,
+  };
+
+  const filteredTasks = allTasks.filter(task => {
     if (filter === 'all') return true;
     return task.status === filter;
   });
-
-  const taskCounts = {
-    all: currentTasks.length,
-    pending: currentTasks.filter(t => t.status === 'pending').length,
-    in_progress: currentTasks.filter(t => t.status === 'in_progress').length,
-    completed: currentTasks.filter(t => t.status === 'completed').length,
-  };
 
   if (loading) {
     return (
@@ -128,7 +161,6 @@ export default function TasksTab() {
         <Text style={styles.headerSubtitle}>Manage your collection tasks</Text>
       </LinearGradient>
 
-      {/* Filter Tabs */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           {[
@@ -136,13 +168,17 @@ export default function TasksTab() {
             { key: 'pending', label: `Pending (${taskCounts.pending})`, dot: '#64748b' },
             { key: 'in_progress', label: `In Progress (${taskCounts.in_progress})`, dot: '#0d9488' },
             { key: 'completed', label: `Completed (${taskCounts.completed})`, dot: '#10b981' },
-          ].map((f) => (
+          ].map(f => (
             <TouchableOpacity
               key={f.key}
               style={[styles.filterTab, filter === f.key && styles.filterTabActive]}
               onPress={() => setFilter(f.key)}
             >
-              {f.dot && <View style={[styles.filterDot, { backgroundColor: filter === f.key ? 'rgba(255,255,255,0.7)' : f.dot }]} />}
+              {f.dot && (
+                <View style={[styles.filterDot, {
+                  backgroundColor: filter === f.key ? 'rgba(255,255,255,0.7)' : f.dot
+                }]} />
+              )}
               <Text style={[styles.filterTabText, filter === f.key && styles.filterTabTextActive]}>
                 {f.label}
               </Text>
@@ -171,26 +207,27 @@ export default function TasksTab() {
         {filteredTasks.length === 0 && !error && (
           <View style={styles.emptyContainer}>
             <Ionicons name="checkmark-done-circle-outline" size={64} color="#d1fae5" />
-            <Text style={styles.emptyTitle}>No {filter !== 'all' ? filter.replace('_', ' ') : ''} tasks</Text>
+            <Text style={styles.emptyTitle}>
+              No {filter !== 'all' ? filter.replace('_', ' ') : ''} tasks
+            </Text>
             <Text style={styles.emptySubtitle}>
               {filter === 'all'
                 ? 'Tasks will appear here when bins need collection'
-                : `You don't have any ${filter.replace('_', ' ')} tasks`}
+                : `No ${filter.replace('_', ' ')} tasks right now`}
             </Text>
           </View>
         )}
 
         {filteredTasks.map((task) => {
           const isServiceRequest = task.task_type === 'service_request' || task.origin === 'service_request';
+          const isDone = task.status === 'completed';
           return (
-            <View key={task.id} style={styles.taskCard}>
+            <View key={task.id} style={[styles.taskCard, isDone && styles.taskCardDone]}>
               <View style={styles.taskHeader}>
                 <View style={styles.taskHeaderLeft}>
-                  <View style={[styles.taskIconContainer, {
-                    backgroundColor: '#ecfdf5',
-                  }]}>
+                  <View style={styles.taskIconContainer}>
                     <Ionicons
-                      name={isServiceRequest ? "document-text" : "trash"}
+                      name={isServiceRequest ? 'document-text' : 'trash'}
                       size={20}
                       color={isServiceRequest ? '#047857' : '#10b981'}
                     />
@@ -209,17 +246,33 @@ export default function TasksTab() {
                   borderColor: getPriorityColor(task.priority),
                 }]}>
                   <Text style={[styles.priorityText, { color: getPriorityColor(task.priority) }]}>
-                    {task.priority.toUpperCase()}
+                    {task.priority?.toUpperCase()}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.taskLocation}>
+              <TouchableOpacity
+                style={styles.taskLocation}
+                onPress={() => openNavigation(task)}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="location" size={16} color="#10b981" />
                 <Text style={styles.taskLocationText} numberOfLines={2}>
-                  {task.location?.address || task.location || 'Location not available'}
+                  {task.location?.address
+                    || (task.location?.landmark ? `Near ${task.location.landmark}` : null)
+                    || (task.location?.lat ? `${parseFloat(task.location.lat).toFixed(5)}, ${parseFloat(task.location.lng).toFixed(5)}` : null)
+                    || 'No address — tap to search'}
                 </Text>
-              </View>
+                <Ionicons name="open-outline" size={13} color="#94a3b8" />
+              </TouchableOpacity>
+              {task.task_type === 'service_request' && task.resident && (
+                <View style={styles.residentRow}>
+                  <Ionicons name="person-outline" size={14} color="#64748b" />
+                  <Text style={styles.residentText}>
+                    {task.resident?.first_name || task.resident?.name || ''} {task.resident?.last_name || ''}{task.resident?.phone_number ? ` · ${task.resident.phone_number}` : ''}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.taskDetails}>
                 <View style={styles.taskDetailItem}>
@@ -233,11 +286,11 @@ export default function TasksTab() {
                   <Text style={styles.taskDetailText}>{task.estimated_time || 'N/A'}</Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) }]}>
-                  <Text style={styles.statusText}>{task.status.replace('_', ' ').toUpperCase()}</Text>
+                  <Text style={styles.statusText}>{task.status?.replace('_', ' ').toUpperCase()}</Text>
                 </View>
               </View>
 
-              {!isServiceRequest && (
+              {!isServiceRequest && !isDone && (
                 <View style={styles.fillLevelBar}>
                   <View style={[styles.fillLevelProgress, {
                     width: `${task.fill_level || 0}%`,
@@ -246,24 +299,31 @@ export default function TasksTab() {
                 </View>
               )}
 
-              {task.status !== 'completed' && (
+              {!isDone && (
                 <View style={styles.taskActions}>
                   {task.status === 'pending' && (
                     <TouchableOpacity
                       style={styles.startButton}
-                      onPress={() => handleUpdateTaskStatus(task.id, 'in_progress')}
+                      onPress={() => handleStart(task)}
                     >
-                      <Ionicons name="play-circle-outline" size={18} color="#047857" />
-                      <Text style={styles.startButtonText}>Start</Text>
+                      <Ionicons name="navigate-outline" size={18} color="#047857" />
+                      <Text style={styles.startButtonText}>Start & Navigate</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
                     style={styles.completeButton}
-                    onPress={() => handleUpdateTaskStatus(task.id, 'completed')}
+                    onPress={() => handleComplete(task)}
                   >
                     <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
                     <Text style={styles.completeButtonText}>Complete</Text>
                   </TouchableOpacity>
+                </View>
+              )}
+
+              {isDone && (
+                <View style={styles.doneRow}>
+                  <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                  <Text style={styles.doneText}>Completed</Text>
                 </View>
               )}
             </View>
@@ -275,21 +335,9 @@ export default function TasksTab() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-  },
-  loadingText: {
-    fontSize: moderateScale(15),
-    color: '#64748b',
-    marginTop: verticalScale(12),
-  },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
+  loadingText: { fontSize: moderateScale(15), color: '#64748b', marginTop: verticalScale(12) },
   header: {
     paddingTop: verticalScale(40),
     paddingBottom: verticalScale(32),
@@ -298,236 +346,77 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: moderateScale(24),
     borderBottomRightRadius: moderateScale(24),
   },
-  headerTitle: {
-    fontSize: moderateScale(28),
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginTop: verticalScale(12),
-    marginBottom: verticalScale(4),
-  },
-  headerSubtitle: {
-    fontSize: moderateScale(14),
-    color: 'rgba(255, 255, 255, 0.85)',
-  },
-  filterContainer: {
-    marginTop: verticalScale(-16),
-    marginBottom: verticalScale(16),
-    paddingHorizontal: moderateScale(20),
-  },
-  filterScroll: {
-    gap: moderateScale(8),
-  },
+  headerTitle: { fontSize: moderateScale(28), fontWeight: 'bold', color: '#fff', marginTop: verticalScale(12), marginBottom: verticalScale(4) },
+  headerSubtitle: { fontSize: moderateScale(14), color: 'rgba(255,255,255,0.85)' },
+  filterContainer: { marginTop: verticalScale(-16), marginBottom: verticalScale(16), paddingHorizontal: moderateScale(20) },
+  filterScroll: { gap: moderateScale(8) },
   filterTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(9),
-    borderRadius: moderateScale(20),
-    gap: moderateScale(6),
-    borderWidth: 1,
-    borderColor: '#d1fae5',
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(9), borderRadius: moderateScale(20),
+    gap: moderateScale(6), borderWidth: 1, borderColor: '#d1fae5',
   },
-  filterTabActive: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
-  },
-  filterTabText: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-    color: '#475569',
-  },
-  filterTabTextActive: {
-    color: '#ffffff',
-  },
-  filterDot: {
-    width: moderateScale(8),
-    height: moderateScale(8),
-    borderRadius: moderateScale(4),
-  },
-  scrollContent: {
-    paddingHorizontal: moderateScale(20),
-    paddingBottom: verticalScale(100),
-  },
+  filterTabActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
+  filterTabText: { fontSize: moderateScale(13), fontWeight: '600', color: '#475569' },
+  filterTabTextActive: { color: '#fff' },
+  filterDot: { width: moderateScale(8), height: moderateScale(8), borderRadius: moderateScale(4) },
+  scrollContent: { paddingHorizontal: moderateScale(20), paddingBottom: verticalScale(100) },
   errorContainer: {
-    backgroundColor: '#fef2f2',
-    borderRadius: moderateScale(12),
-    padding: moderateScale(20),
-    alignItems: 'center',
-    marginBottom: verticalScale(16),
-    gap: verticalScale(12),
-    borderWidth: 1,
-    borderColor: '#fecaca',
+    backgroundColor: '#fef2f2', borderRadius: moderateScale(12), padding: moderateScale(20),
+    alignItems: 'center', marginBottom: verticalScale(16), gap: verticalScale(12),
+    borderWidth: 1, borderColor: '#fecaca',
   },
-  errorText: {
-    fontSize: moderateScale(14),
-    color: '#dc2626',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  retryButton: {
-    backgroundColor: '#047857',
-    paddingHorizontal: moderateScale(20),
-    paddingVertical: verticalScale(8),
-    borderRadius: moderateScale(8),
-  },
-  retryButtonText: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  emptyContainer: {
-    paddingVertical: verticalScale(60),
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    fontSize: moderateScale(18),
-    fontWeight: 'bold',
-    color: '#334155',
-    marginTop: verticalScale(16),
-    marginBottom: verticalScale(4),
-  },
-  emptySubtitle: {
-    fontSize: moderateScale(14),
-    color: '#94a3b8',
-    textAlign: 'center',
-    paddingHorizontal: moderateScale(40),
-  },
+  errorText: { fontSize: moderateScale(14), color: '#dc2626', textAlign: 'center', fontWeight: '500' },
+  retryButton: { backgroundColor: '#047857', paddingHorizontal: moderateScale(20), paddingVertical: verticalScale(8), borderRadius: moderateScale(8) },
+  retryButtonText: { fontSize: moderateScale(13), fontWeight: '600', color: '#fff' },
+  emptyContainer: { paddingVertical: verticalScale(60), alignItems: 'center' },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: 'bold', color: '#334155', marginTop: verticalScale(16), marginBottom: verticalScale(4) },
+  emptySubtitle: { fontSize: moderateScale(14), color: '#94a3b8', textAlign: 'center', paddingHorizontal: moderateScale(40) },
   taskCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: moderateScale(14),
-    padding: moderateScale(16),
-    marginBottom: verticalScale(12),
-    borderWidth: 1,
-    borderColor: '#d1fae5',
+    backgroundColor: '#fff', borderRadius: moderateScale(14),
+    padding: moderateScale(16), marginBottom: verticalScale(12),
+    borderWidth: 1, borderColor: '#d1fae5',
   },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: verticalScale(12),
-  },
-  taskHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
+  taskCardDone: { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
+  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: verticalScale(12) },
+  taskHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   taskIconContainer: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: moderateScale(12),
+    width: moderateScale(40), height: moderateScale(40), borderRadius: moderateScale(20),
+    backgroundColor: '#ecfdf5', justifyContent: 'center', alignItems: 'center', marginRight: moderateScale(12),
   },
-  taskHeaderText: {
-    flex: 1,
-  },
-  binId: {
-    fontSize: moderateScale(16),
-    fontWeight: 'bold',
-    color: '#1e293b',
-  },
-  taskType: {
-    fontSize: moderateScale(11),
-    color: '#64748b',
-    marginTop: verticalScale(2),
-  },
-  priorityBadge: {
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(4),
-    borderRadius: moderateScale(8),
-    borderWidth: 1,
-  },
-  priorityText: {
-    fontSize: moderateScale(10),
-    fontWeight: 'bold',
-    letterSpacing: 0.3,
-  },
-  taskLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(6),
-    marginBottom: verticalScale(12),
-  },
-  taskLocationText: {
-    fontSize: moderateScale(13),
-    color: '#64748b',
-    flex: 1,
-  },
-  taskDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(12),
-    marginBottom: verticalScale(12),
-  },
-  taskDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(4),
-  },
-  taskDetailText: {
-    fontSize: moderateScale(12),
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  statusBadge: {
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(4),
-    borderRadius: moderateScale(8),
-    marginLeft: 'auto',
-  },
-  statusText: {
-    fontSize: moderateScale(10),
-    fontWeight: 'bold',
-    color: '#ffffff',
-    letterSpacing: 0.3,
-  },
-  fillLevelBar: {
-    height: verticalScale(5),
-    backgroundColor: '#e2e8f0',
-    borderRadius: moderateScale(3),
-    overflow: 'hidden',
-    marginBottom: verticalScale(12),
-  },
-  fillLevelProgress: {
-    height: '100%',
-    borderRadius: moderateScale(3),
-  },
-  taskActions: {
-    flexDirection: 'row',
-    gap: moderateScale(8),
-  },
+  taskHeaderText: { flex: 1 },
+  binId: { fontSize: moderateScale(16), fontWeight: 'bold', color: '#1e293b' },
+  taskType: { fontSize: moderateScale(11), color: '#64748b', marginTop: verticalScale(2) },
+  priorityBadge: { paddingHorizontal: moderateScale(10), paddingVertical: verticalScale(4), borderRadius: moderateScale(8), borderWidth: 1 },
+  priorityText: { fontSize: moderateScale(10), fontWeight: 'bold', letterSpacing: 0.3 },
+  taskLocation: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(6), marginBottom: verticalScale(12) },
+  taskLocationText: { fontSize: moderateScale(13), color: '#64748b', flex: 1 },
+  taskDetails: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(12), marginBottom: verticalScale(12) },
+  taskDetailItem: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(4) },
+  taskDetailText: { fontSize: moderateScale(12), color: '#64748b', fontWeight: '500' },
+  statusBadge: { paddingHorizontal: moderateScale(10), paddingVertical: verticalScale(4), borderRadius: moderateScale(8), marginLeft: 'auto' },
+  statusText: { fontSize: moderateScale(10), fontWeight: 'bold', color: '#fff', letterSpacing: 0.3 },
+  fillLevelBar: { height: verticalScale(5), backgroundColor: '#e2e8f0', borderRadius: moderateScale(3), overflow: 'hidden', marginBottom: verticalScale(12) },
+  fillLevelProgress: { height: '100%', borderRadius: moderateScale(3) },
+  taskActions: { flexDirection: 'row', gap: moderateScale(8) },
   startButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ecfdf5',
-    paddingVertical: verticalScale(10),
-    borderRadius: moderateScale(10),
-    gap: moderateScale(6),
-    borderWidth: 1,
-    borderColor: '#d1fae5',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#ecfdf5', paddingVertical: verticalScale(10),
+    borderRadius: moderateScale(10), gap: moderateScale(6),
+    borderWidth: 1, borderColor: '#d1fae5',
   },
-  startButtonText: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-    color: '#047857',
-  },
+  startButtonText: { fontSize: moderateScale(13), fontWeight: '600', color: '#047857' },
   completeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10b981',
-    paddingVertical: verticalScale(10),
-    borderRadius: moderateScale(10),
-    gap: moderateScale(6),
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#10b981', paddingVertical: verticalScale(10),
+    borderRadius: moderateScale(10), gap: moderateScale(6),
   },
-  completeButtonText: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-    color: '#ffffff',
+  completeButtonText: { fontSize: moderateScale(13), fontWeight: '600', color: '#fff' },
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(6), marginTop: verticalScale(4) },
+  doneText: { fontSize: moderateScale(13), color: '#10b981', fontWeight: '600' },
+  residentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: moderateScale(5),
+    marginBottom: verticalScale(10), paddingHorizontal: moderateScale(2),
   },
+  residentText: { fontSize: moderateScale(12), color: '#64748b', flex: 1 },
 });

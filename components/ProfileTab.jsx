@@ -64,9 +64,16 @@ export default function ProfileTab() {
   const changeCalendarMonth = (dir) => setCalendarMonth(prev => {
     const n = new Date(prev); n.setMonth(prev.getMonth() + dir); return n;
   });
+  const toLocalISO = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  };
+
   const selectDob = (date) => {
     if (!date) return;
-    const iso = date.toISOString().slice(0, 10);
+    const iso = toLocalISO(date);
     setProfileData(p => ({ ...p, date_of_birth: iso }));
     setDobYear(iso.slice(0, 4));
     setDobMonth(iso.slice(5, 7));
@@ -496,7 +503,7 @@ export default function ProfileTab() {
                 </View>
                 <View style={styles.calendarGrid}>
                   {calendarDays.map((day, idx) => {
-                    const ds = day ? day.toISOString().slice(0, 10) : '';
+                    const ds = day ? toLocalISO(day) : '';
                     const isSel = profileData.date_of_birth === ds;
                     return (
                       <TouchableOpacity

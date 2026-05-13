@@ -10,20 +10,17 @@ const { width, height } = Dimensions.get('window');
 const scale = (size) => (width / 375) * size;
 const moderateScale = (size, factor = 0.5) => size + (scale(size) - size) * factor;
 
-export default function WorkAreasTab({ tasks }) {
-  const [viewMode, setViewMode] = useState('map'); // 'map' or 'stats'
+export default function WorkAreasTab({ tasks, completedCount = 0 }) {
+  const [viewMode, setViewMode] = useState('map');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Calculate statistics
   const stats = useMemo(() => {
-    const total = tasks?.length || 0;
-    const completed = tasks?.filter(t => t.status === 'completed').length || 0;
     const inProgress = tasks?.filter(t => t.status === 'in_progress').length || 0;
     const pending = tasks?.filter(t => t.status === 'pending').length || 0;
     const highPriority = tasks?.filter(t => t.priority === 'high').length || 0;
-
-    return { total, completed, inProgress, pending, highPriority };
-  }, [tasks]);
+    const total = (tasks?.length || 0) + completedCount;
+    return { total, completed: completedCount, inProgress, pending, highPriority };
+  }, [tasks, completedCount]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -189,52 +186,6 @@ export default function WorkAreasTab({ tasks }) {
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: '#94a3b8' }]} />
                   <Text style={styles.legendText}>Pending ({stats.pending})</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Performance Insights */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="trending-up" size={moderateScale(24)} color="#10b981" />
-              <Text style={styles.cardTitle}>Performance Insights</Text>
-            </View>
-            <View style={styles.cardContent}>
-              <View style={styles.insightRow}>
-                <View style={styles.insightItem}>
-                  <LinearGradient
-                    colors={['#10b981', '#059669']}
-                    style={styles.insightBadge}
-                  >
-                    <Ionicons name="speedometer" size={moderateScale(24)} color="white" />
-                  </LinearGradient>
-                  <Text style={styles.insightLabel}>Efficiency</Text>
-                  <Text style={styles.insightValue}>
-                    {stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%
-                  </Text>
-                </View>
-
-                <View style={styles.insightItem}>
-                  <LinearGradient
-                    colors={['#059669', '#047857']}
-                    style={styles.insightBadge}
-                  >
-                    <Ionicons name="checkmark-done" size={moderateScale(24)} color="white" />
-                  </LinearGradient>
-                  <Text style={styles.insightLabel}>Completion</Text>
-                  <Text style={styles.insightValue}>{stats.completed}/{stats.total}</Text>
-                </View>
-
-                <View style={styles.insightItem}>
-                  <LinearGradient
-                    colors={['#0d9488', '#0f766e']}
-                    style={styles.insightBadge}
-                  >
-                    <Ionicons name="flash" size={moderateScale(24)} color="white" />
-                  </LinearGradient>
-                  <Text style={styles.insightLabel}>Active</Text>
-                  <Text style={styles.insightValue}>{stats.inProgress}</Text>
                 </View>
               </View>
             </View>

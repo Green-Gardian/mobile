@@ -1,5 +1,6 @@
 import { api } from './api';
 
+
 const driverApi = {
   get: (url, config) => api.get('/driver' + url, config),
   post: (url, data, config) => api.post('/driver' + url, data, config),
@@ -38,8 +39,8 @@ export const DriverAPI = {
   // Complete a task
   completeTask: (taskId, data) => driverApi.put(`/tasks/${taskId}/complete`, data),
 
-  // Get all bins for map
-  getBins: () => driverApi.get('/bins', { baseURL: API_BASE_URL }),
+  // Get all bins for map — route is /bins (not /driver/bins)
+  getBins: () => api.get('/bins'),
 
   // Get dashboard stats
   getDashboardStats: () => driverApi.get('/dashboard-stats'),
