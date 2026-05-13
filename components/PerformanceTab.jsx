@@ -23,7 +23,11 @@ export default function PerformanceTab() {
     distanceCovered: '0 km',
     fuelEfficiency: 'N/A',
     complaints: 0,
-    commendations: 0
+    commendations: 0,
+    thisMonthCollections: 0,
+    lastMonthCollections: 0,
+    thisMonthRating: 0,
+    lastMonthRating: 0,
   });
 
   const [weeklyData, setWeeklyData] = useState([]);
@@ -36,16 +40,22 @@ export default function PerformanceTab() {
 
         setPerformanceData({
           totalCollections: data.totalCollections || data.metrics?.total_completed || 0,
-          onTimeRate: data.onTimeRate || 100,
-          averageRating: data.averageRating || 5.0,
-          distanceCovered: data.distanceCovered || '0 km',
-          fuelEfficiency: data.fuelEfficiency || 'N/A',
-          complaints: data.complaints || 0,
-          commendations: data.commendations || 0
+          onTimeRate: data.onTimeRate || data.metrics?.on_time_rate || 100,
+          averageRating: data.averageRating || data.metrics?.average_rating || 0,
+          distanceCovered: data.distanceCovered || data.metrics?.distance_covered || '0 km',
+          fuelEfficiency: data.fuelEfficiency || data.metrics?.fuel_efficiency || 'N/A',
+          complaints: data.complaints || data.metrics?.complaints || 0,
+          commendations: data.commendations || data.metrics?.commendations || 0,
+          thisMonthCollections: data.metrics?.this_month_collections || 0,
+          lastMonthCollections: data.metrics?.last_month_collections || 0,
+          thisMonthRating: data.metrics?.this_month_rating || 0,
+          lastMonthRating: data.metrics?.last_month_rating || 0,
         });
 
-        if (data.weeklyData) {
+        if (data.weeklyData && Array.isArray(data.weeklyData)) {
           setWeeklyData(data.weeklyData);
+        } else if (data.weekly && Array.isArray(data.weekly)) {
+          setWeeklyData(data.weekly);
         }
       }
     } catch (error) {
@@ -171,10 +181,20 @@ export default function PerformanceTab() {
               <Ionicons name="calendar" size={20} color="#10b981" />
             </View>
             <View style={styles.trendContent}>
-              <Text style={styles.trendLabel}>This Month</Text>
-              <Text style={styles.trendSubtext}>vs Last Month</Text>
+              <Text style={styles.trendLabel}>This Month Collections</Text>
+              <Text style={styles.trendSubtext}>
+                {performanceData.lastMonthCollections > 0 
+                  ? `vs Last Month (${performanceData.lastMonthCollections})`
+                  : 'vs Last Month'}
+              </Text>
             </View>
-            <Text style={styles.trendValue}>+12%</Text>
+            <Text style={[styles.trendValue, {
+              color: performanceData.thisMonthCollections >= performanceData.lastMonthCollections ? '#10b981' : '#ef4444'
+            }]}>
+              {performanceData.lastMonthCollections > 0
+                ? `${performanceData.thisMonthCollections >= performanceData.lastMonthCollections ? '+' : ''}${Math.round(((performanceData.thisMonthCollections - performanceData.lastMonthCollections) / performanceData.lastMonthCollections) * 100)}%`
+                : `${performanceData.thisMonthCollections}`}
+            </Text>
           </View>
 
           <View style={styles.trendCard}>
@@ -182,10 +202,10 @@ export default function PerformanceTab() {
               <Ionicons name="speedometer" size={20} color="#3b82f6" />
             </View>
             <View style={styles.trendContent}>
-              <Text style={styles.trendLabel}>Efficiency</Text>
-              <Text style={styles.trendSubtext}>vs Last Month</Text>
+              <Text style={styles.trendLabel}>On-Time Rate</Text>
+              <Text style={styles.trendSubtext}>Delivery performance</Text>
             </View>
-            <Text style={styles.trendValue}>+8%</Text>
+            <Text style={styles.trendValue}>{performanceData.onTimeRate}%</Text>
           </View>
 
           <View style={styles.trendCard}>
@@ -193,64 +213,44 @@ export default function PerformanceTab() {
               <Ionicons name="star" size={20} color="#f59e0b" />
             </View>
             <View style={styles.trendContent}>
-              <Text style={styles.trendLabel}>Rating</Text>
-              <Text style={styles.trendSubtext}>vs Last Month</Text>
+              <Text style={styles.trendLabel}>Average Rating</Text>
+              <Text style={styles.trendSubtext}>
+                {performanceData.lastMonthRating > 0 
+                  ? `vs Last Month (${performanceData.lastMonthRating.toFixed(1)})`
+                  : 'Current rating'}
+              </Text>
             </View>
-            <Text style={styles.trendValue}>+0.3</Text>
+            <Text style={[styles.trendValue, {
+              color: performanceData.thisMonthRating >= performanceData.lastMonthRating ? '#10b981' : '#ef4444'
+            }]}>
+              {performanceData.lastMonthRating > 0
+                ? `${performanceData.thisMonthRating >= performanceData.lastMonthRating ? '+' : ''}${(performanceData.thisMonthRating - performanceData.lastMonthRating).toFixed(1)}`
+                : performanceData.averageRating.toFixed(1)}
+            </Text>
           </View>
-        </View>
 
-        {/* Achievement Badges */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Ionicons name="trophy" size={22} color="#10b981" />
-            <Text style={styles.sectionTitle}>Achievements</Text>
+          <View style={styles.trendCard}>
+            <View style={[styles.iconCircle, { backgroundColor: '#fee2e2' }]}>
+              <Ionicons name="alert-circle" size={20} color="#ef4444" />
+            </View>
+            <View style={styles.trendContent}>
+              <Text style={styles.trendLabel}>Complaints</Text>
+              <Text style={styles.trendSubtext}>Customer feedback</Text>
+            </View>
+            <Text style={[styles.trendValue, { color: performanceData.complaints > 0 ? '#ef4444' : '#10b981' }]}>
+              {performanceData.complaints}
+            </Text>
           </View>
 
-          <View style={styles.achievementsGrid}>
-            <View style={styles.achievementCard}>
-              <LinearGradient
-                colors={['#10b981', '#059669']}
-                style={styles.achievementGradient}
-              >
-                <Ionicons name="flame" size={32} color="#ffffff" />
-                <Text style={styles.achievementNumber}>7</Text>
-                <Text style={styles.achievementLabel}>Day Streak</Text>
-              </LinearGradient>
+          <View style={styles.trendCard}>
+            <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
+              <Ionicons name="thumbs-up" size={20} color="#10b981" />
             </View>
-
-            <View style={styles.achievementCard}>
-              <LinearGradient
-                colors={['#3b82f6', '#2563eb']}
-                style={styles.achievementGradient}
-              >
-                <Ionicons name="medal" size={32} color="#ffffff" />
-                <Text style={styles.achievementNumber}>Top 10%</Text>
-                <Text style={styles.achievementLabel}>This Month</Text>
-              </LinearGradient>
+            <View style={styles.trendContent}>
+              <Text style={styles.trendLabel}>Commendations</Text>
+              <Text style={styles.trendSubtext}>Positive feedback</Text>
             </View>
-
-            <View style={styles.achievementCard}>
-              <LinearGradient
-                colors={['#f59e0b', '#d97706']}
-                style={styles.achievementGradient}
-              >
-                <Ionicons name="star" size={32} color="#ffffff" />
-                <Text style={styles.achievementNumber}>5.0</Text>
-                <Text style={styles.achievementLabel}>Perfect Rating</Text>
-              </LinearGradient>
-            </View>
-
-            <View style={styles.achievementCard}>
-              <LinearGradient
-                colors={['#8b5cf6', '#7c3aed']}
-                style={styles.achievementGradient}
-              >
-                <Ionicons name="leaf" size={32} color="#ffffff" />
-                <Text style={styles.achievementNumber}>2.4T</Text>
-                <Text style={styles.achievementLabel}>CO2 Saved</Text>
-              </LinearGradient>
-            </View>
+            <Text style={styles.trendValue}>{performanceData.commendations}</Text>
           </View>
         </View>
       </ScrollView>
@@ -481,40 +481,5 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(20),
     fontWeight: 'bold',
     color: '#10b981',
-  },
-  // Achievements
-  achievementsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: moderateScale(12),
-  },
-  achievementCard: {
-    width: `${(width - moderateScale(52)) / 2}px`,
-    borderRadius: moderateScale(16),
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  achievementGradient: {
-    padding: moderateScale(20),
-    alignItems: 'center',
-    minHeight: verticalScale(140),
-    justifyContent: 'center',
-  },
-  achievementNumber: {
-    fontSize: moderateScale(24),
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginTop: verticalScale(12),
-    marginBottom: verticalScale(4),
-  },
-  achievementLabel: {
-    fontSize: moderateScale(12),
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    fontWeight: '500',
   },
 });
