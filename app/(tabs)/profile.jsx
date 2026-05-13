@@ -849,6 +849,13 @@ export default function ProfileScreen() {
                       <Ionicons name="create-outline" size={18} color="#059669" />
                       <Text style={styles.addressActionText}>Edit</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.addressActionBtn, styles.addressDeleteBtn]}
+                      onPress={() => deleteAddress(address.id)}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                      <Text style={styles.addressDeleteText}>Delete</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -1062,16 +1069,16 @@ export default function ProfileScreen() {
                 <Text style={styles.cancelButton}>Cancel</Text>
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
-                {editingAddress ? 'Edit Address' : 'Add Address'}
+                {editingAddress ? 'Update Address' : 'Add Address'}
               </Text>
               <TouchableOpacity
                 onPress={saveAddress}
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator size="small" color="#8B5CF6" />
+                  <ActivityIndicator size="small" color="#10b981" />
                 ) : (
-                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                  <Text style={styles.modalSaveButtonText}>{editingAddress ? 'Update' : 'Add'}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1185,16 +1192,6 @@ export default function ProfileScreen() {
                   placeholder="Nearby landmark"
                 />
               </View>
-
-              {editingAddress && (
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => deleteAddress(editingAddress.id)}
-                >
-                  <Ionicons name="trash-outline" size={20} color="white" />
-                  <Text style={styles.deleteButtonText}>Delete Address</Text>
-                </TouchableOpacity>
-              )}
 
               <View style={styles.bottomSpacing} />
             </ScrollView>
@@ -1550,6 +1547,14 @@ const styles = StyleSheet.create({
   addressActionText: {
     fontSize: 14,
     color: '#059669',
+    fontWeight: '600',
+  },
+  addressDeleteBtn: {
+    marginLeft: 12,
+  },
+  addressDeleteText: {
+    fontSize: 14,
+    color: '#dc2626',
     fontWeight: '600',
   },
   modalContainer: { flex: 1, backgroundColor: 'white' },
