@@ -1,6 +1,7 @@
 // app/(tabs)/profile.tsx
 import { Ionicons } from '@expo/vector-icons';
 import SelectPicker from '../../components/SelectPicker';
+import DuesTab from '../../components/DuesTab';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import {
@@ -35,6 +36,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profileExists, setProfileExists] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
 
   // MFA State
   const [mfaStatus, setMfaStatus] = useState(null);
@@ -618,6 +620,42 @@ export default function ProfileScreen() {
           </View>
         </LinearGradient>
 
+        {/* Tabs Section */}
+        <View style={styles.tabsSection}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]}
+            onPress={() => setActiveTab('profile')}
+          >
+            <Ionicons
+              name="person-circle"
+              size={20}
+              color={activeTab === 'profile' ? '#10b981' : '#9ca3af'}
+            />
+            <Text style={[styles.tabButtonText, activeTab === 'profile' && styles.activeTabButtonText]}>
+              Profile
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'dues' && styles.activeTabButton]}
+            onPress={() => setActiveTab('dues')}
+          >
+            <Ionicons
+              name="receipt"
+              size={20}
+              color={activeTab === 'dues' ? '#10b981' : '#9ca3af'}
+            />
+            <Text style={[styles.tabButtonText, activeTab === 'dues' && styles.activeTabButtonText]}>
+              Pending Dues
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Conditionally render content based on active tab */}
+        {activeTab === 'dues' ? (
+          <DuesTab />
+        ) : (
+          <>
         {/* Combined Profile Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -813,6 +851,8 @@ export default function ProfileScreen() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+        </>
+        )}
 
       {/* Privacy & Security Modal */}
       <Modal
@@ -1131,6 +1171,35 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
+  tabsSection: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingHorizontal: 16,
+    marginVertical: 8,
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+    gap: 6,
+  },
+  activeTabButton: {
+    borderBottomColor: '#10b981',
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9ca3af',
+  },
+  activeTabButtonText: {
+    color: '#10b981',
+  },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 16, fontSize: 16, color: '#666' },
   scrollContainer: { flex: 1 },

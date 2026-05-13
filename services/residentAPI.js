@@ -296,6 +296,11 @@ export const ResidentAPI = {
       body: JSON.stringify(messageData),
     });
   },
+
+  // ===== PENDING DUES =====
+  getPendingDues: async () => {
+    return apiCall('/dues/pending');
+  },
 };
 
 // Utility functions for formatting and validation
