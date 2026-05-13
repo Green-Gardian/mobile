@@ -1,13 +1,17 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
+import { Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from './AuthContext';
+import { clearTokens } from '../services/api';
 
 const SocketContext = createContext();
 
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
-    const { state } = useAuth();
+    const { state, signOut } = useAuth();
+    const router = useRouter();
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const socketRef = useRef(null);
@@ -108,6 +112,22 @@ export const SocketProvider = ({ children }) => {
 
             newSocket.on('drivers:update', (data) => {
                 console.log('📍 Event Received: drivers:update', data);
+            });
+
+            // Force logout when society is blocked by super admin
+            newSocket.on('force-logout', async (data) => {
+                console.warn('🚫 Force logout received:', data?.reason);
+                newSocket.disconnect();
+                socketRef.current = null;
+                setSocket(null);
+                setIsConnected(false);
+                await clearTokens();
+                Alert.alert(
+                    'Access Revoked',
+                    data?.reason || 'Your society has been blocked. You have been logged out.',
+                    [{ text: 'OK', onPress: () => router.replace('/(auth)/signin') }],
+                    { cancelable: false }
+                );
             });
 
             newSocket.on('receiveMessage', (data) => {

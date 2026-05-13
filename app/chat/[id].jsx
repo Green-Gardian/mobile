@@ -78,16 +78,24 @@ export default function ChatRoomScreen() {
     };
 
     const handleReceiveMessage = (newMessage) => {
-        // Check if message belongs to this chat
         if (String(newMessage.chatId) === String(chatId)) {
             setMessages((prev) => {
-                // Avoid duplicates if needed, but simple append works usually
-                const isMine = newMessage.senderId === state.user.id;
-                return [...prev, { ...newMessage, isMine }];
+                const isMine = String(newMessage.senderId) === String(state.user.id);
+                const incoming = { ...newMessage, isMine };
+                // Replace optimistic message if we sent it, otherwise append
+                if (isMine) {
+                    const optIdx = prev.findIndex(m => String(m.id).startsWith('opt-'));
+                    if (optIdx !== -1) {
+                        const next = [...prev];
+                        next[optIdx] = incoming;
+                        return next;
+                    }
+                }
+                // Avoid duplicate by real id
+                if (prev.some(m => String(m.id) === String(incoming.id))) return prev;
+                return [...prev, incoming];
             });
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
+            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
         }
     };
 
@@ -119,12 +127,18 @@ export default function ChatRoomScreen() {
         }
 
         const content = inputMessage.trim();
-        console.log(`Sending message via socket ${socket.id}:`, { chatId, content });
+        setInputMessage('');
 
-        // Optimistic UI update (optional, but good for feedback)
-        // setMessages(prev => [...prev, { id: Date.now(), content, sender_id: state.user.id, isMine: true, created_at: new Date().toISOString() }]);
-
-        setInputMessage(''); // clear immediately for UX
+        // Optimistic append — show immediately
+        const optimistic = {
+            id: `opt-${Date.now()}`,
+            content,
+            sender_id: state.user.id,
+            isMine: true,
+            created_at: new Date().toISOString(),
+        };
+        setMessages(prev => [...prev, optimistic]);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
 
         socket.emit('message', { chatId, content });
         console.log("Message emitted to socket");
