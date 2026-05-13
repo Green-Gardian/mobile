@@ -1,7 +1,7 @@
 // app/(tabs)/service-requests.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,6 +54,43 @@ export default function ServiceRequestsScreen() {
   });
 
   const [formErrors, setFormErrors] = useState({});
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const selectedDate = requestForm.preferredDate ? new Date(requestForm.preferredDate) : null;
+  const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const firstDayIndex = firstOfMonth.getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const days = [];
+
+    for (let blank = 0; blank < firstDayIndex; blank++) {
+      days.push(null);
+    }
+    for (let day = 1; day <= totalDays; day++) {
+      days.push(new Date(year, month, day));
+    }
+    return days;
+  }, [calendarMonth]);
+
+  const selectCalendarDate = (date) => {
+    if (!date) return;
+    const isoDate = date.toISOString().slice(0, 10);
+    setRequestForm({ ...requestForm, preferredDate: isoDate });
+    setFormErrors({ ...formErrors, preferredDate: undefined });
+    setShowDatePicker(false);
+  };
+
+  const changeCalendarMonth = (direction) => {
+    setCalendarMonth((prev) => {
+      const next = new Date(prev);
+      next.setMonth(prev.getMonth() + direction);
+      return next;
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -256,6 +292,9 @@ export default function ServiceRequestsScreen() {
       title: '',
       description: '',
       preferredDate: '',
+      preferredDateYear: '',
+      preferredDateMonth: '',
+      preferredDateDay: '',
       preferredTimeSlot: 'morning',
       specialInstructions: '',
       estimatedWeight: '',
@@ -327,18 +366,12 @@ export default function ServiceRequestsScreen() {
             <Text style={styles.requestTitle} numberOfLines={1}>{item.title}</Text>
             <Text style={styles.requestNumber}>#{item.request_number}</Text>
           </View>
-          <LinearGradient
-            colors={ServiceRequestUtils.getStatusColors(item.status)}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.statusBadgeGradient}
-          >
+          <View style={styles.statusBadge}> 
             <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-          </LinearGradient>
+          </View>
         </View>
       
         <View style={styles.requestDetails}>
-          <View style={styles.statusIndicator(item.status)} />
           <View style={styles.detailRow}>
             <View style={styles.detailIconBg}>
               <Ionicons name="calendar-outline" size={14} color="#10b981" />
@@ -407,7 +440,7 @@ export default function ServiceRequestsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
+          <ActivityIndicator size="large" color="#10b981" />
           <Text style={styles.loadingText}>Loading service requests...</Text>
         </View>
       </SafeAreaView>
@@ -416,10 +449,7 @@ export default function ServiceRequestsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <LinearGradient
-        colors={['#10b981', '#059669']}
-        style={[styles.mainHeader, { paddingTop: insets.top }]}
-      >
+      <View style={[styles.mainHeader, { paddingTop: insets.top, backgroundColor: '#065f46' }]}> 
         <View style={styles.headerContent}>
           <View>
             <Text style={styles.headerTitle}>Service Requests</Text>
@@ -435,7 +465,7 @@ export default function ServiceRequestsScreen() {
               setShowCreateModal(true);
             }}
           >
-            <Ionicons name="add" size={28} color="#10b981" />
+            <Ionicons name="add" size={28} color="#0f172a" />
           </TouchableOpacity>
         </View>
 
@@ -470,7 +500,7 @@ export default function ServiceRequestsScreen() {
             )}
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       <FlatList
         data={requests}
@@ -496,11 +526,16 @@ export default function ServiceRequestsScreen() {
               </TouchableOpacity>
               <Text style={styles.modalTitle}>New Service Request</Text>
               <TouchableOpacity onPress={createServiceRequest} disabled={loading}>
-                {loading ? <ActivityIndicator size="small" color="#8B5CF6" /> : <Text style={styles.modalActionPrimary}>Create</Text>}
+                {loading ? <ActivityIndicator size="small" color="#10b981" /> : <Text style={styles.modalActionPrimary}>Create</Text>}
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={styles.modalContent}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               <View style={styles.formCard}>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Service Type *</Text>
@@ -508,7 +543,7 @@ export default function ServiceRequestsScreen() {
                     <Picker selectedValue={requestForm.serviceTypeId} onValueChange={(value) => setRequestForm({...requestForm, serviceTypeId: value})} style={styles.picker}>
                       <Picker.Item label="Select service type..." value="" />
                       {serviceTypes.map((type) => (
-                        <Picker.Item key={type.id} label={`${type.name}${type.base_price ? ` - $${type.base_price}` : ''}`} value={String(type.id)} />
+                        <Picker.Item key={type.id} label={`${type.name}${type.base_price ? ` - Rs. ${type.base_price}` : ''}`} value={String(type.id)} />
                       ))}
                     </Picker>
                   </View>
@@ -543,21 +578,78 @@ export default function ServiceRequestsScreen() {
               </View>
 
               <View style={styles.formCard}>
-                <View style={styles.row}>
-                  <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>Preferred Date *</Text>
-                    <TextInput style={[styles.input, formErrors.preferredDate && styles.inputError]} value={requestForm.preferredDate} onChangeText={(text) => setRequestForm({...requestForm, preferredDate: text})} placeholder="YYYY-MM-DD" />
-                    {formErrors.preferredDate && <Text style={styles.errorText}>{formErrors.preferredDate}</Text>}
-                  </View>
-                  <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <Text style={styles.label}>Time Slot</Text>
-                    <View style={styles.pickerContainer}>
-                      <Picker selectedValue={requestForm.preferredTimeSlot} onValueChange={(value) => setRequestForm({...requestForm, preferredTimeSlot: value})} style={styles.picker}>
-                        <Picker.Item label="Morning" value="morning" />
-                        <Picker.Item label="Afternoon" value="afternoon" />
-                        <Picker.Item label="Evening" value="evening" />
-                      </Picker>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Preferred Date *</Text>
+                  <TouchableOpacity
+                    style={[styles.dateInputButton, formErrors.preferredDate && styles.inputError]}
+                    onPress={() => {
+                      setCalendarMonth(selectedDate || new Date());
+                      setShowDatePicker((prev) => !prev);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.dateInputText}>
+                      {requestForm.preferredDate ? ServiceRequestUtils.formatDate(requestForm.preferredDate) : 'Select service date'}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={20} color="#16a34a" />
+                  </TouchableOpacity>
+
+                  {showDatePicker && (
+                    <View style={styles.calendarPicker}>
+                      <View style={styles.calendarNav}>
+                        <TouchableOpacity onPress={() => changeCalendarMonth(-1)}>
+                          <Ionicons name="chevron-back" size={18} color="#0f172a" />
+                        </TouchableOpacity>
+                        <Text style={styles.calendarMonthLabel}>
+                          {calendarMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </Text>
+                        <TouchableOpacity onPress={() => changeCalendarMonth(1)}>
+                          <Ionicons name="chevron-forward" size={18} color="#0f172a" />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.calendarWeekRow}>
+                        {daysOfWeek.map((day) => (
+                          <Text key={day} style={styles.calendarWeekDay}>{day}</Text>
+                        ))}
+                      </View>
+
+                      <View style={styles.calendarGrid}>
+                        {calendarDays.map((day, index) => {
+                          const dateString = day ? day.toISOString().slice(0, 10) : '';
+                          const isSelected = requestForm.preferredDate === dateString;
+                          return (
+                            <TouchableOpacity
+                              key={`${index}-${dateString}`}
+                              style={[
+                                styles.calendarDay,
+                                isSelected && styles.calendarDaySelected,
+                                !day && styles.calendarDayEmpty,
+                              ]}
+                              disabled={!day}
+                              onPress={() => selectCalendarDate(day)}
+                            >
+                              <Text style={[styles.calendarDayText, isSelected && styles.calendarDayTextSelected]}>
+                                {day ? day.getDate() : ''}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
                     </View>
+                  )}
+
+                  {formErrors.preferredDate && <Text style={styles.errorText}>{formErrors.preferredDate}</Text>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Time Slot</Text>
+                  <View style={styles.pickerContainer}>
+                    <Picker selectedValue={requestForm.preferredTimeSlot} onValueChange={(value) => setRequestForm({...requestForm, preferredTimeSlot: value})} style={styles.picker}>
+                      <Picker.Item label="Morning" value="morning" />
+                      <Picker.Item label="Afternoon" value="afternoon" />
+                      <Picker.Item label="Evening" value="evening" />
+                    </Picker>
                   </View>
                 </View>
 
@@ -596,7 +688,7 @@ export default function ServiceRequestsScreen() {
             <View style={{ width: 50 }} />
           </View>
 
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
             {selectedRequest && (
               <View>
                 <View style={styles.detailCard}>
@@ -605,14 +697,9 @@ export default function ServiceRequestsScreen() {
                       <Text style={styles.detailTitle}>{selectedRequest.title}</Text>
                       <Text style={styles.requestNumber}>#{selectedRequest.request_number}</Text>
                     </View>
-                    <LinearGradient
-                      colors={ServiceRequestUtils.getStatusColors(selectedRequest.status)}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.statusBadgeGradient}
-                    >
+                    <View style={[styles.statusBadge, styles.statusBadgeByStatus(selectedRequest.status)]}>
                       <Text style={styles.statusText}>{selectedRequest.status.toUpperCase()}</Text>
-                    </LinearGradient>
+                    </View>
                   </View>
                 </View>
 
@@ -657,7 +744,7 @@ export default function ServiceRequestsScreen() {
                       <Ionicons name="cash-outline" size={18} color="#64748b" style={{ marginRight: 10 }} />
                       <Text style={styles.infoLabel}>Pricing:</Text>
                       <Text style={styles.infoValue}>
-                        ${selectedRequest.final_price || selectedRequest.quoted_price || selectedRequest.base_price}
+                        Rs. {selectedRequest.final_price || selectedRequest.quoted_price || selectedRequest.base_price}
                       </Text>
                     </View>
                   )}
@@ -746,11 +833,11 @@ export default function ServiceRequestsScreen() {
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Submit Feedback</Text>
             <TouchableOpacity onPress={submitFeedback} disabled={loading}>
-              {loading ? <ActivityIndicator size="small" color="#8B5CF6" /> : <Text style={styles.modalActionPrimary}>Submit</Text>}
+              {loading ? <ActivityIndicator size="small" color="#10b981" /> : <Text style={styles.modalActionPrimary}>Submit</Text>}
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
             <View style={styles.feedbackIntro}>
               <View style={styles.feedbackIconCircle}>
                 <Ionicons name="star" size={32} color="#10b981" />
@@ -821,11 +908,11 @@ const styles = StyleSheet.create({
     paddingBottom: 25,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    elevation: 8,
-    shadowColor: '#10b981',
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
   },
   headerContent: {
     flexDirection: 'row',
@@ -835,7 +922,7 @@ const styles = StyleSheet.create({
     paddingTop: 15,
   },
   headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#ffffff' },
-  headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   headerFab: {
     backgroundColor: '#ffffff',
     width: 46,
@@ -857,40 +944,45 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 6,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    padding: 14,
+    borderColor: '#e5e7eb',
+    padding: 18,
     flexDirection: 'row',
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   duesBannerLeft: {
     flex: 1,
   },
   duesTitle: {
-    color: '#ffffff',
+    color: '#0f172a',
     fontSize: 14,
     fontWeight: '800',
   },
   duesAmount: {
-    color: 'rgba(255,255,255,0.9)',
+    color: '#475569',
     marginTop: 4,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   duesStatusPill: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 999,
-    marginTop: 8,
+    marginTop: 10,
   },
   duesStatusText: {
     fontSize: 11,
     fontWeight: '800',
   },
   duesWarning: {
-    color: '#fee2e2',
+    color: '#dc2626',
     fontSize: 12,
     marginTop: 8,
     lineHeight: 16,
@@ -898,7 +990,7 @@ const styles = StyleSheet.create({
   },
   duesPayButton: {
     alignSelf: 'center',
-    backgroundColor: '#1f2937',
+    backgroundColor: '#16a34a',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -931,26 +1023,42 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.65,
   },
-  requestCard: { 
-    backgroundColor: 'white', 
-    borderRadius: 20, 
-    marginBottom: 20, 
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 4 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 12, 
-    elevation: 4,
+  requestCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e5e7eb',
     overflow: 'hidden',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  requestCardContent: { padding: 20 },
+  requestCardContent: { padding: 22 },
+  requestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
   requestHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   requestTitleContainer: { flex: 1, marginRight: 10 },
-  requestTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b', marginBottom: 4 },
-  requestNumber: { fontSize: 11, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  statusBadgeGradient: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  statusText: { color: 'white', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
+  requestTitle: { fontSize: 17, fontWeight: '800', color: '#0f172a', marginBottom: 2 },
+  requestNumber: { fontSize: 10, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d1fae5',
+    borderWidth: 1,
+    borderColor: '#16a34a',
+  },
+  statusBadgeByStatus: (status) => ({
+    backgroundColor: ServiceRequestUtils.getStatusColor(status) + '20',
+    borderWidth: 1,
+    borderColor: ServiceRequestUtils.getStatusColor(status),
+  }),
+  statusText: { color: '#166534', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
   statusIndicator: (status) => ({
     position: 'absolute',
     left: 0,
@@ -959,13 +1067,13 @@ const styles = StyleSheet.create({
     width: 4,
     backgroundColor: ServiceRequestUtils.getStatusColor(status),
   }),
-  requestDetails: { 
-    backgroundColor: '#f8fafc', 
-    padding: 16, 
-    borderRadius: 16, 
+  requestDetails: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: '#e2e8f0',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -980,16 +1088,16 @@ const styles = StyleSheet.create({
     marginRight: 12 
   },
   detailText: { fontSize: 13, color: '#475569', fontWeight: '600' },
-  requestFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  serviceTypeBadge: { 
-    backgroundColor: '#f1f5f9', 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 10,
+  requestFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
+  serviceTypeBadge: {
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  serviceTypeText: { fontSize: 11, color: '#64748b', fontWeight: '800' },
+  serviceTypeText: { fontSize: 11, color: '#0f766e', fontWeight: '800' },
   footerActions: { flexDirection: 'row', alignItems: 'center', gap: 15 },
   cancelBtnIcon: { padding: 5 },
   modalContainer: { flex: 1, backgroundColor: '#f8fafc' },
@@ -1040,6 +1148,88 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   picker: { height: 50 },
+  datePickerContainer: {
+    marginBottom: 8,
+  },
+  dateInputButton: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateInputText: {
+    color: '#0f172a',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  calendarPicker: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  calendarNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  calendarMonthLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  calendarWeekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  calendarWeekDay: {
+    width: 32,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  calendarDay: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  calendarDayEmpty: {
+    backgroundColor: 'transparent',
+  },
+  calendarDaySelected: {
+    backgroundColor: '#dcfce7',
+  },
+  calendarDayText: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  calendarDayTextSelected: {
+    color: '#166534',
+  },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   halfWidth: { width: '48%' },
   errorText: { color: '#ef4444', fontSize: 12, marginTop: 4, fontWeight: '500' },

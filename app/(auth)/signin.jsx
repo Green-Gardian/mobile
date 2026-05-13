@@ -25,7 +25,6 @@ export default function SignIn() {
         router.replace('/(tabs)');
       }
     } catch (e) {
-      console.error('SignIn error:', e);
       if (e?.response?.data?.requiresMFA) {
         try {
           const authResult = await LocalAuthentication.authenticateAsync({
@@ -60,7 +59,6 @@ export default function SignIn() {
             router.replace('/(tabs)');
           }
         } catch (mfaErr) {
-          console.error('MFA SignIn error:', mfaErr);
           setError(mfaErr?.response?.data?.message || 'Unable to sign in with Biometrics');
         }
       } else {
@@ -85,7 +83,7 @@ export default function SignIn() {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoCircle}>
-              <Ionicons name="leaf" size={48} color="#6d28d9" />
+              <Ionicons name="leaf" size={48} color="#dc2626" />
             </View>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to Green Guardian</Text>
@@ -184,13 +182,13 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#f5f3ff',
+    backgroundColor: '#fee2e2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#6d28d9',
+    shadowColor: '#dc2626',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 2,
   },
@@ -245,16 +243,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   forgotLink: {
-    color: '#6d28d9',
+    color: '#dc2626',
     fontSize: 14,
     fontWeight: '700',
   },
   button: {
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#dc2626',
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#6d28d9',
+    shadowColor: '#dc2626',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -294,7 +292,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   footerLink: {
-    color: '#6d28d9',
+    color: '#dc2626',
     fontSize: 14,
     fontWeight: '700',
   },

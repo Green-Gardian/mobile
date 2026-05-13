@@ -527,7 +527,7 @@ export default function HomeScreen() {
               {/* Welcome Card */}
               <View style={styles.welcomeCard}>
                 <LinearGradient
-                  colors={['#10b981', '#059669']}
+                  colors={['#064e3b', '#065f46']}
                   style={styles.welcomeGradient}
                 >
                   <View style={styles.statusBadgeCorner}>
@@ -556,12 +556,14 @@ export default function HomeScreen() {
                       <View style={styles.profileInfo}>
                         <Text style={styles.welcomeText}>Welcome back!</Text>
                         <Text style={styles.driverName}>{residentProfile?.full_name || state.user?.username || 'Resident'}</Text>
-                        <View style={styles.locationBadge}>
-                          <Ionicons name="location" size={12} color="rgba(255,255,255,0.8)" />
-                          <Text style={styles.locationText} numberOfLines={1}>
-                            {residentProfile?.area || residentProfile?.city || 'Location not set'}
-                          </Text>
-                        </View>
+                        {(residentProfile?.area || residentProfile?.city) ? (
+                          <View style={styles.locationBadge}>
+                            <Ionicons name="location" size={12} color="rgba(255,255,255,0.8)" />
+                            <Text style={styles.locationText} numberOfLines={1}>
+                              {residentProfile?.area || residentProfile?.city}
+                            </Text>
+                          </View>
+                        ) : null}
                       </View>
                     </View>
                   </View>
@@ -571,15 +573,15 @@ export default function HomeScreen() {
               {/* Stats Cards */}
               <View style={styles.statsContainer}>
                 <View style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: '#ecfdf5' }]}>
+                  <View style={styles.statIconContainer}>
                     <Ionicons name="list" size={20} color="#10b981" />
                   </View>
                   <Text style={styles.statNumber}>{residentStats.totalRequests}</Text>
                   <Text style={styles.statLabel}>Total Requests</Text>
                 </View>
                 <View style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: '#fff7ed' }]}>
-                    <Ionicons name="time" size={20} color="#f59e0b" />
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="time" size={20} color="#10b981" />
                   </View>
                   <Text style={styles.statNumber}>
                     {residentStats.activeRequests}
@@ -587,8 +589,8 @@ export default function HomeScreen() {
                   <Text style={styles.statLabel}>Active</Text>
                 </View>
                 <View style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: '#f0f9ff' }]}>
-                    <Ionicons name="checkmark-done" size={20} color="#0ea5e9" />
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="checkmark-done" size={20} color="#10b981" />
                   </View>
                   <Text style={styles.statNumber}>
                     {residentStats.completedRequests}
@@ -596,8 +598,8 @@ export default function HomeScreen() {
                   <Text style={styles.statLabel}>Completed</Text>
                 </View>
                 <View style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: '#f5f3ff' }]}>
-                    <Ionicons name="chatbubble-ellipses" size={20} color="#8b5cf6" />
+                  <View style={styles.statIconContainer}>
+                    <Ionicons name="chatbubble-ellipses" size={20} color="#10b981" />
                   </View>
                   <Text style={styles.statNumber}>{residentStats.userRating}</Text>
                   <Text style={styles.statLabel}>User Rating</Text>
@@ -608,11 +610,11 @@ export default function HomeScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Upcoming Collection</Text>
                 {nextCollection ? (
-                  <View style={[styles.taskCard, { borderLeftWidth: 4, borderLeftColor: '#10b981' }]}>
+                  <View style={styles.taskCard}>
                     <View style={styles.taskHeader}>
                       <Text style={styles.binId}>{nextCollection.title || 'Scheduled Pickup'}</Text>
-                      <View style={[styles.priorityBadge, { backgroundColor: '#10b981' }]}>
-                        <Text style={styles.priorityText}>{nextCollection.status.toUpperCase()}</Text>
+                      <View style={[styles.priorityBadge, { backgroundColor: '#d1fae5' }]}>
+                        <Text style={[styles.priorityText, { color: '#065f46' }]}>{nextCollection.status.toUpperCase()}</Text>
                       </View>
                     </View>
                     <View style={styles.dateTimeContainer}>
@@ -648,7 +650,7 @@ export default function HomeScreen() {
                     style={styles.quickActionButton}
                     onPress={() => router.push('/service-requests')}
                   >
-                    <View style={[styles.actionIconBg, { backgroundColor: '#f0fdf4' }]}>
+                    <View style={styles.actionIconBg}>
                       <Ionicons name="add-circle-outline" size={24} color="#10b981" />
                     </View>
                     <Text style={styles.quickActionText}>Request{"\n"}Service</Text>
@@ -657,8 +659,8 @@ export default function HomeScreen() {
                     style={styles.quickActionButton}
                     onPress={() => router.push('/profile')}
                   >
-                    <View style={[styles.actionIconBg, { backgroundColor: '#eff6ff' }]}>
-                      <Ionicons name="map-outline" size={24} color="#3b82f6" />
+                    <View style={styles.actionIconBg}>
+                      <Ionicons name="map-outline" size={24} color="#10b981" />
                     </View>
                     <Text style={styles.quickActionText}>My{"\n"}Address</Text>
                   </TouchableOpacity>
@@ -666,8 +668,8 @@ export default function HomeScreen() {
                     style={styles.quickActionButton}
                     onPress={() => router.push('/chat/list')}
                   >
-                    <View style={[styles.actionIconBg, { backgroundColor: '#f5f3ff' }]}>
-                      <Ionicons name="chatbubbles-outline" size={24} color="#8b5cf6" />
+                    <View style={styles.actionIconBg}>
+                      <Ionicons name="chatbubbles-outline" size={24} color="#10b981" />
                     </View>
                     <Text style={styles.quickActionText}>Messages</Text>
                   </TouchableOpacity>
@@ -735,7 +737,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={[]}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       {/* Content */}
       <View style={[styles.content, { marginTop: insets.top }]}>
         {renderContent()}
@@ -760,7 +762,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name={tab.icon}
                   size={20}
-                  color={activeTab === tab.key ? '#6d28d9' : '#a78bfa'}
+                  color={activeTab === tab.key ? '#064e3b' : '#94a3b8'}
                 />
               </View>
               <Text style={[styles.tabLabel, activeTab === tab.key && styles.activeTabLabel]}>
@@ -905,7 +907,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e9d5ff',
+    borderTopColor: '#d1fae5',
   },
   bottomTab: {
     alignItems: 'center',
@@ -921,16 +923,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   activeTabIconContainer: {
-    backgroundColor: '#ede9fe',
+    backgroundColor: '#d1fae5',
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#a78bfa',
+    color: '#94a3b8',
     textAlign: 'center',
   },
   activeTabLabel: {
-    color: '#6d28d9',
+    color: '#064e3b',
     fontWeight: '700',
   },
   content: {
@@ -945,15 +947,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: '#064e3b',
     position: 'relative',
   },
   welcomeGradient: {
     padding: 20,
+    backgroundColor: 'transparent',
   },
   welcomeContent: {
     flexDirection: 'row',
@@ -988,7 +987,7 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#f8fafc',
     marginBottom: 4,
   },
   driverName: {
@@ -999,21 +998,21 @@ const styles = StyleSheet.create({
   },
   driverId: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#d1fae5',
   },
   statusBadgeCorner: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   statusBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1022,7 +1021,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#f8fafc',
     textAlign: 'center',
   },
   statsContainer: {
@@ -1039,16 +1038,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#6d28d9',
+    color: '#065f46',
     marginBottom: 4,
   },
   statLabel: {
@@ -1089,11 +1085,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   taskHeader: {
     flexDirection: 'row',
@@ -1143,7 +1136,7 @@ const styles = StyleSheet.create({
   },
   fillLevelProgress: {
     height: '100%',
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#10b981',
   },
   estimatedTime: {
     fontSize: 12,
@@ -1191,20 +1184,17 @@ const styles = StyleSheet.create({
   },
   quickActionButton: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8fafc',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     marginHorizontal: 4,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
   },
   quickActionText: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#334155',
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -1376,7 +1366,7 @@ const styles = StyleSheet.create({
   locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1386,7 +1376,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.9)',
+    color: '#f8fafc',
     fontWeight: '500'
   },
   statIconContainer: {
@@ -1395,7 +1385,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8
+    marginBottom: 8,
+    backgroundColor: '#ecfdf5',
   },
   dateTimeContainer: {
     flexDirection: 'row',
@@ -1439,10 +1430,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2
+    backgroundColor: '#ecfdf5',
   }
 });

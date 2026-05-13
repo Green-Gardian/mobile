@@ -49,7 +49,7 @@ export default function Forgot() {
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.logoCircle}>
-              <Ionicons name="shield-half" size={48} color="#6d28d9" />
+              <Ionicons name="shield-half" size={48} color="#16a34a" />
             </View>
             <Text style={styles.title}>Forgot Password?</Text>
             <Text style={styles.subtitle}>Enter your email to receive a reset OTP</Text>
@@ -129,11 +129,11 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#f5f3ff',
+    backgroundColor: '#ecfdf5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#6d28d9',
+    shadowColor: '#16a34a',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -186,11 +186,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   button: {
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#16a34a',
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#6d28d9',
+    shadowColor: '#16a34a',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   footerLink: {
-    color: '#6d28d9',
+    color: '#16a34a',
     fontSize: 14,
     fontWeight: '700',
   },

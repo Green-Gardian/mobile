@@ -100,6 +100,14 @@ export default function ChatListScreen() {
         }) + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const getChatTitle = (chat) => {
+        const title = chat.chatTitle || chat.title || chat.name || '';
+        if (!title || title === 'undefined' || title === 'null') {
+            return 'Customer Support';
+        }
+        return title;
+    };
+
     if (loading) {
         return (
             <View style={styles.container}>
@@ -146,7 +154,7 @@ export default function ChatListScreen() {
             {!error && (
                 <ScrollView
                     style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
@@ -173,15 +181,17 @@ export default function ChatListScreen() {
                                     key={chat.id}
                                     style={styles.chatCard}
                                     activeOpacity={0.7}
-                                    onPress={() => router.push(`/chat/${chat.id}?title=${chat.chatTitle}`)}
+                                    onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id, title: getChatTitle(chat) } })}
                                 >
-                                    <View style={styles.avatarContainer}>
-                                        <Ionicons name="person-circle" size={48} color="#cbd5e1" />
+                                                    <View style={styles.avatarContainer}>
+                                        <View style={styles.avatarCircle}>
+                                            <Ionicons name="person" size={24} color="#10b981" />
+                                        </View>
                                     </View>
                                     <View style={styles.chatContent}>
                                         <View style={styles.chatHeader}>
                                             <Text style={styles.chatTitle} numberOfLines={1}>
-                                                {chat.chatTitle && chat.chatTitle !== 'undefined' ? chat.chatTitle : (chat.title && chat.title !== 'undefined' ? chat.title : 'Customer Support')}
+                                                {getChatTitle(chat)}
                                             </Text>
                                             <Text style={styles.dateText}>
                                                 {formatDate(chat.updated_at)}
@@ -291,23 +301,29 @@ const styles = StyleSheet.create({
         lineHeight: 24,
     },
     chatList: {
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 8,
     },
     chatCard: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        marginBottom: 12,
-        padding: 16,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e2e8f0',
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
     },
     avatarContainer: {
+        width: 48,
+        alignItems: 'center',
+        justifyContent: 'center',
         marginRight: 12,
+    },
+    avatarCircle: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: '#ecfdf5',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     chatContent: {
         flex: 1,

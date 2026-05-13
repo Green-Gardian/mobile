@@ -585,7 +585,7 @@ export default function ProfileScreen() {
       >
         {/* Premium Profile Header */}
         <LinearGradient
-          colors={['#10b981', '#059669']}
+          colors={['#047857', '#065f46']}
           style={[styles.profileHeader, { paddingTop: insets.top + 20 }]}
         >
           <View style={styles.headerContent}>
@@ -740,17 +740,12 @@ export default function ProfileScreen() {
           ) : (
             addresses.map((address) => (
               <View key={address.id} style={styles.addressCard}>
-                <LinearGradient
-                  colors={['#10b981', '#059669']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addressCardHeader}
-                >
+                <View style={styles.addressCardHeader}>
                   <View style={styles.addressTypeWrapper}>
                     <Ionicons
                       name={address.address_type === 'home' ? 'home' : address.address_type === 'office' ? 'business' : 'location'}
                       size={18}
-                      color="white"
+                      color="#0f172a"
                     />
                     <Text style={styles.addressTypeText}>{address.address_type.toUpperCase()}</Text>
                   </View>
@@ -759,7 +754,7 @@ export default function ProfileScreen() {
                       <Text style={styles.defaultBadgeText}>DEFAULT</Text>
                     </View>
                   )}
-                </LinearGradient>
+                </View>
 
                 <View style={styles.addressCardBody}>
                   <Text style={styles.addressMainText}>{address.street_address}</Text>
@@ -977,7 +972,13 @@ export default function ProfileScreen() {
                         style={styles.locationSuggestionItem}
                         onPress={() => handleSelectLocation(loc)}
                       >
-                        <Text style={styles.locationSuggestionText} numberOfLines={2}>
+                        <View style={styles.locationSuggestionHeader}>
+                          <Ionicons name="location-outline" size={18} color="#0f172a" />
+                          <Text style={styles.locationSuggestionTitle} numberOfLines={1}>
+                            {loc.display_name.split(',')[0]}
+                          </Text>
+                        </View>
+                        <Text style={styles.locationSuggestionSubtext} numberOfLines={2}>
                           {loc.display_name}
                         </Text>
                       </TouchableOpacity>
@@ -1151,10 +1152,10 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.4)',
     marginBottom: 12,
     position: 'relative',
@@ -1171,16 +1172,21 @@ const styles = StyleSheet.create({
   },
   editAvatarBtn: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#065f46',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#047857',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileName: {
     fontSize: 22,
@@ -1219,21 +1225,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1e293b', marginLeft: 12, flex: 1 },
   infoCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ecfdf5',
     padding: 14,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#f1f5f9'
+    borderColor: '#d1fae5'
   },
   infoLabel: { fontSize: 11, color: '#64748b', marginBottom: 4, fontWeight: '600', textTransform: 'uppercase' },
   infoValue: { fontSize: 15, color: '#1e293b', fontWeight: '500' },
@@ -1254,23 +1262,23 @@ const styles = StyleSheet.create({
   pickerContainer: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, backgroundColor: '#f8fafc', overflow: 'hidden' },
   picker: { height: 50 },
   saveButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#047857',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 12,
     flex: 1,
-    elevation: 4,
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    elevation: 2,
+    shadowColor: '#047857',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
   },
   buttonDisabled: { backgroundColor: '#94a3b8' },
   saveButtonText: { color: 'white', fontSize: 16, fontWeight: '700', marginLeft: 8 },
   addButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#047857',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
@@ -1280,7 +1288,7 @@ const styles = StyleSheet.create({
   addButtonText: { color: 'white', fontSize: 13, fontWeight: '700', marginLeft: 4 },
   rowButtons: { flexDirection: 'row', gap: 12, marginTop: 10 },
   signOutButton: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#ffffff',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1288,7 +1296,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#fee2e2'
+    borderColor: '#d1d5db'
   },
   signOutButtonText: { color: '#dc2626', fontSize: 15, fontWeight: '700', marginLeft: 8 },
   emptyAddresses: { alignItems: 'center', paddingVertical: 40 },
@@ -1299,11 +1307,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    elevation: 3,
+    borderColor: '#d1fae5',
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
     shadowRadius: 4,
   },
   addressCardHeader: {
@@ -1311,7 +1319,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
   },
   addressTypeWrapper: {
     flexDirection: 'row',
@@ -1319,19 +1330,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addressTypeText: {
-    color: 'white',
+    color: '#065f46',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   defaultBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   defaultBadgeText: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 10,
     fontWeight: '800',
   },
@@ -1386,8 +1397,13 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca'
   },
   deleteButtonText: { color: '#dc2626', fontSize: 15, fontWeight: '700', marginLeft: 8 },
+  locationSuggestions: { marginTop: 10, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#ffffff' },
+  locationSuggestionItem: { paddingVertical: 14, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  locationSuggestionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  locationSuggestionTitle: { fontSize: 14, fontWeight: '700', color: '#0f172a', flex: 1 },
+  locationSuggestionSubtext: { fontSize: 13, color: '#475569', lineHeight: 18 },
   bottomSpacing: { height: 100 },
-  actionBtn: { backgroundColor: '#f8fafc', padding: 16, borderRadius: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#f1f5f9' },
+  actionBtn: { backgroundColor: '#ffffff', padding: 16, borderRadius: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#d1fae5' },
   actionContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   actionIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#ecfdf5', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   actionTextContainer: { flex: 1 },

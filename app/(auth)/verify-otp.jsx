@@ -117,7 +117,7 @@ export default function VerifyOTP() {
               <Ionicons
                 name={step === 1 ? "mail-open-outline" : "lock-closed-outline"}
                 size={48}
-                color="#6d28d9"
+                color="#16a34a"
               />
             </View>
 
@@ -263,11 +263,11 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#f5f3ff',
+    backgroundColor: '#ecfdf5',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#6d28d9',
+    shadowColor: '#16a34a',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   emailText: {
     fontSize: 16,
-    color: '#6d28d9',
+    color: '#16a34a',
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -336,11 +336,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#6d28d9',
+    backgroundColor: '#16a34a',
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#6d28d9',
+    shadowColor: '#16a34a',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resendText: {
-    color: '#6d28d9',
+    color: '#16a34a',
     fontSize: 14,
     fontWeight: '700',
   },
