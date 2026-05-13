@@ -850,9 +850,9 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.bottomSpacing} />
-      </ScrollView>
         </>
-        )}
+      )}
+    </ScrollView>
 
       {/* Privacy & Security Modal */}
       <Modal
