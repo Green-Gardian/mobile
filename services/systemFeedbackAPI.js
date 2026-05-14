@@ -4,10 +4,11 @@
 
 import { getAccessToken } from './api';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '');
 const API_URL = `${API_BASE}/feedback/system`;
 
 /**
+ * 
  * Get authorization header
  */
 async function getAuthHeader() {

@@ -613,17 +613,6 @@ export default function ProfileTab() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.modernActionBtn}>
-            <View style={[styles.actionIconCircle, { backgroundColor: '#ecfdf5' }]}>
-              <Ionicons name="notifications-outline" size={22} color="#047857" />
-            </View>
-            <View style={styles.actionTextContainer}>
-              <Text style={styles.actionTitle}>Notifications</Text>
-              <Text style={styles.actionSubtitle}>Manage notification preferences</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
-          </TouchableOpacity>
         </View>
 
         {/* Support Section */}
