@@ -19,10 +19,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ResidentAPI } from '../services/residentAPI';
 
 const STATUS_META = {
-  paid: { label: 'Paid', color: '#16a34a', bg: '#dcfce7', icon: 'checkmark-circle' },
-  overdue: { label: 'Overdue', color: '#dc2626', bg: '#fee2e2', icon: 'alert-circle' },
-  failed: { label: 'Failed', color: '#b45309', bg: '#fef3c7', icon: 'close-circle' },
-  pending: { label: 'Pending', color: '#0369a1', bg: '#e0f2fe', icon: 'time' },
+  paid: { label: 'Paid', color: '#047857', bg: '#ecfdf5', icon: 'checkmark-circle' },
+  overdue: { label: 'Overdue', color: '#dc2626', bg: '#fef2f2', icon: 'alert-circle' },
+  failed: { label: 'Failed', color: '#64748b', bg: '#f1f5f9', icon: 'close-circle' },
+  pending: { label: 'Pending', color: '#0d9488', bg: '#f0fdfa', icon: 'time' },
 };
 
 const getStatusMeta = (s) => STATUS_META[s] || STATUS_META.pending;
@@ -54,7 +54,6 @@ export default function PaymentHistoryScreen() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [payingId, setPayingId] = useState(null);
 
   useEffect(() => {
     loadHistory();
@@ -122,87 +121,57 @@ export default function PaymentHistoryScreen() {
 
   const renderItem = ({ item }) => {
     const meta = getStatusMeta(item.status);
-    const isPaying = payingId === item.id;
     const currency = (item.currency || 'PKR').toUpperCase();
-    const hasActions = item.receiptUrl || item.status !== 'paid';
-
-    // Border color mirrors status
-    const borderColors = {
-      paid: '#10b981',
-      overdue: '#dc2626',
-      failed: '#f59e0b',
-      pending: '#0ea5e9',
-    };
-    const borderColor = borderColors[item.status] || '#94a3b8';
 
     return (
-      <View style={[styles.card, { borderLeftColor: borderColor }]}>
-        {/* Top row: month + status badge */}
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.monthText}>{formatMonth(item.billingMonth)}</Text>
-            <Text style={styles.dueDateText}>Due: {formatDate(item.dueDate)}</Text>
+      <View style={styles.card}>
+        <View style={styles.cardLeft}>
+          <View style={[styles.cardIcon, { backgroundColor: meta.bg }]}>
+            <Ionicons name={meta.icon} size={18} color={meta.color} />
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
-            <Ionicons name={meta.icon} size={13} color={meta.color} />
+          <View style={styles.cardInfo}>
+            <Text style={styles.monthText}>{formatMonth(item.billingMonth)}</Text>
+            <View style={styles.metaRowInline}>
+              {item.paidAt ? (
+                <>
+                  <Ionicons name="checkmark-circle-outline" size={12} color="#64748b" />
+                  <Text style={styles.metaText}>Paid {formatDate(item.paidAt)}</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="calendar-outline" size={12} color="#64748b" />
+                  <Text style={styles.metaText}>Due {formatDate(item.dueDate)}</Text>
+                </>
+              )}
+            </View>
+            {item.paymentMethod && (
+              <View style={styles.metaRowInline}>
+                <Ionicons name="card-outline" size={12} color="#64748b" />
+                <Text style={styles.metaText}>
+                  via {item.paymentMethod.charAt(0).toUpperCase() + item.paymentMethod.slice(1)}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.cardRight}>
+          <Text style={styles.amountValue}>
+            {currency} {Number(item.amount || 0).toLocaleString('en-PK', { minimumFractionDigits: 0 })}
+          </Text>
+          <View style={[styles.statusPill, { backgroundColor: meta.bg, borderColor: meta.color + '40' }]}>
             <Text style={[styles.statusLabel, { color: meta.color }]}>{meta.label}</Text>
           </View>
+          {item.receiptUrl && (
+            <TouchableOpacity
+              style={styles.receiptBtn}
+              onPress={() => handleViewReceipt(item.receiptUrl)}
+            >
+              <Ionicons name="receipt-outline" size={12} color="#047857" />
+              <Text style={styles.receiptBtnText}>Receipt</Text>
+            </TouchableOpacity>
+          )}
         </View>
-
-        {/* Amount */}
-        <View style={styles.amountRow}>
-          <Text style={styles.amountLabel}>Amount</Text>
-          <Text style={styles.amountValue}>
-            {currency} {Number(item.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </Text>
-        </View>
-
-        {/* Paid metadata */}
-        {item.paidAt && (
-          <View style={styles.metaRow}>
-            <Ionicons name="calendar-outline" size={13} color="#64748b" />
-            <Text style={styles.metaText}>Paid on {formatDate(item.paidAt)}</Text>
-          </View>
-        )}
-        {item.paymentMethod && (
-          <View style={styles.metaRow}>
-            <Ionicons name="card-outline" size={13} color="#64748b" />
-            <Text style={styles.metaText}>
-              via {item.paymentMethod.charAt(0).toUpperCase() + item.paymentMethod.slice(1)}
-            </Text>
-          </View>
-        )}
-
-        {/* Actions — only shown if there's something to do */}
-        {hasActions && (
-          <View style={styles.cardActions}>
-            {item.receiptUrl && (
-              <TouchableOpacity
-                style={styles.receiptBtn}
-                onPress={() => handleViewReceipt(item.receiptUrl)}
-              >
-                <Ionicons name="receipt-outline" size={15} color="#10b981" />
-                <Text style={styles.receiptBtnText}>View Receipt</Text>
-              </TouchableOpacity>
-            )}
-            {item.status !== 'paid' && (
-              <TouchableOpacity
-                style={[styles.payBtn, isPaying && styles.payBtnDisabled]}
-                onPress={() => handlePayNow(item)}
-                disabled={isPaying || !!payingId}
-              >
-                {isPaying ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="card" size={15} color="#fff" />
-                    <Text style={styles.payBtnText}>Pay Now</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
       </View>
     );
   };
@@ -223,7 +192,7 @@ export default function PaymentHistoryScreen() {
     <View style={styles.screen}>
       {/* Header */}
       <LinearGradient
-        colors={['#10b981', '#059669']}
+        colors={['#047857', '#065f46']}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} id="payment-history-back">
@@ -319,113 +288,37 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  monthText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  dueDateText: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  statusLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  amountRow: {
+    borderRadius: 14,
+    padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f1fdf7',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
-  amountLabel: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '500',
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  cardIcon: {
+    width: 40, height: 40, borderRadius: 20,
+    justifyContent: 'center', alignItems: 'center',
   },
-  amountValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#059669',
+  cardInfo: { flex: 1 },
+  monthText: { fontSize: 14, fontWeight: '600', color: '#1e293b', marginBottom: 3 },
+  metaRowInline: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  metaText: { fontSize: 11, color: '#94a3b8' },
+  cardRight: { alignItems: 'flex-end', gap: 5 },
+  amountValue: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+  statusPill: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 10, borderWidth: 1,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 5,
-  },
-  metaText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
-    justifyContent: 'flex-end',
-  },
+  statusLabel: { fontSize: 10, fontWeight: '700' },
   receiptBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#10b981',
-    backgroundColor: '#f0fdf4',
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 8, backgroundColor: '#ecfdf5',
+    borderWidth: 1, borderColor: '#d1fae5',
   },
-  receiptBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#10b981',
-  },
-  payBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 20,
-    backgroundColor: '#10b981',
-  },
-  payBtnDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  payBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
-  },
+  receiptBtnText: { fontSize: 10, fontWeight: '600', color: '#047857' },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
