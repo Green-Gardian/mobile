@@ -398,9 +398,6 @@ export default function HomeScreen() {
               >
                 <Ionicons name="chatbubbles" size={moderateScale(22)} color="white" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="notifications" size={moderateScale(22)} color="white" />
-              </TouchableOpacity>
             </View>
           </View>
 
@@ -833,9 +830,6 @@ export default function HomeScreen() {
             <Ionicons name="chatbubble-ellipses-outline" size={22} color="#10b981" />
           </TouchableOpacity>
         )}
-        <TouchableOpacity style={styles.headerBtn}>
-          <Ionicons name="notifications-outline" size={22} color={isResident ? '#10b981' : '#6d28d9'} />
-        </TouchableOpacity>
       </View>
     </View>
   );
