@@ -721,16 +721,22 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 ) : (
-                  <View style={styles.emptyTasksCard}>
-                    <Ionicons name="calendar-outline" size={32} color="#cbd5e1" />
-                    <Text style={styles.emptyTasksText}>No collections scheduled</Text>
-                    <TouchableOpacity
-                      style={styles.requestSmallBtn}
-                      onPress={() => router.push('/service-requests')}
-                    >
-                      <Text style={styles.requestSmallBtnText}>Request Service</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.noCollectionCard}
+                    onPress={() => router.push('/service-requests')}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.noCollectionIconWrap}>
+                      <Ionicons name="calendar-outline" size={28} color="#047857" />
+                    </View>
+                    <View style={styles.noCollectionText}>
+                      <Text style={styles.noCollectionTitle}>No upcoming collection</Text>
+                      <Text style={styles.noCollectionSub}>Tap to schedule a pickup</Text>
+                    </View>
+                    <View style={styles.noCollectionArrow}>
+                      <Ionicons name="chevron-forward" size={18} color="#047857" />
+                    </View>
+                  </TouchableOpacity>
                 )}
               </View>
 
@@ -1522,6 +1528,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#10b981',
     fontWeight: '700'
+  },
+  noCollectionCard: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  noCollectionIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noCollectionText: {
+    flex: 1,
+  },
+  noCollectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  noCollectionSub: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  noCollectionArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#dcfce7',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionIconBg: {
     width: 48,

@@ -757,39 +757,20 @@ export default function ProfileScreen() {
 
           <View style={styles.divider} />
 
-          <View style={styles.rowButtons}>
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.buttonDisabled]}
-              onPress={saveProfile}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <>
-                  <Ionicons name="save-outline" size={20} color="white" />
-                  <Text style={styles.saveButtonText}>Update Profile</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.signOutButton}
-              onPress={async () => {
-                try {
-                  const result = await signOut();
-                  if (result.success) {
-                    router.replace('/(auth)/signin');
-                  }
-                } catch (error) {
-                  console.error('Sign out error:', error);
-                }
-              }}
-            >
-              <Ionicons name="log-out-outline" size={20} color="#059669" />
-              <Text style={styles.signOutButtonText}>Sign Out</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.buttonDisabled]}
+            onPress={saveProfile}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <>
+                <Ionicons name="save-outline" size={20} color="white" />
+                <Text style={styles.saveButtonText}>Update Profile</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Addresses Section */}
@@ -899,6 +880,24 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#64748b" />
           </TouchableOpacity>
         </View>
+
+        {/* Sign Out — always at bottom */}
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={async () => {
+            try {
+              const result = await signOut();
+              if (result.success) {
+                router.replace('/(auth)/signin');
+              }
+            } catch (error) {
+              console.error('Sign out error:', error);
+            }
+          }}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#dc2626" />
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
         </>
@@ -1438,12 +1437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    flex: 1,
-    elevation: 2,
-    shadowColor: '#047857',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
+    marginTop: 10,
   },
   buttonDisabled: { backgroundColor: '#94a3b8' },
   saveButtonText: { color: 'white', fontSize: 16, fontWeight: '700', marginLeft: 8 },
@@ -1456,17 +1450,17 @@ const styles = StyleSheet.create({
     borderRadius: 20
   },
   addButtonText: { color: 'white', fontSize: 13, fontWeight: '700', marginLeft: 4 },
-  rowButtons: { flexDirection: 'row', gap: 12, marginTop: 10 },
   signOutButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff5f5',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: '#d1d5db'
+    borderColor: '#fecaca',
   },
   signOutButtonText: { color: '#dc2626', fontSize: 15, fontWeight: '700', marginLeft: 8 },
   emptyAddresses: { alignItems: 'center', paddingVertical: 40 },
