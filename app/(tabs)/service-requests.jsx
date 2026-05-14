@@ -805,21 +805,28 @@ export default function ServiceRequestsScreen() {
                     <View style={styles.feedbackShowcase}>
                       <View style={[styles.statusIndicator('approved'), { width: 3 }]} />
                       <View style={styles.ratingStarsRow}>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Ionicons 
-                            key={star} 
-                            name={star <= existingFeedback.rating ? "star" : "star-outline"} 
-                            size={18} 
-                            color="#f59e0b" 
-                          />
-                        ))}
-                        <Text style={styles.ratingValueText}>{existingFeedback.rating}.0</Text>
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const r = existingFeedback.overall_rating ?? existingFeedback.rating ?? 0;
+                          return (
+                            <Ionicons
+                              key={star}
+                              name={star <= r ? "star" : "star-outline"}
+                              size={18}
+                              color="#f59e0b"
+                            />
+                          );
+                        })}
+                        <Text style={styles.ratingValueText}>
+                          {(existingFeedback.overall_rating ?? existingFeedback.rating ?? 0)}/5
+                        </Text>
                       </View>
                       <View style={styles.feedbackCommentBox}>
-                        <Text style={styles.feedbackCommentText}>"{existingFeedback.comment}"</Text>
+                        <Text style={styles.feedbackCommentText}>
+                          "{existingFeedback.comments ?? existingFeedback.comment ?? ''}"
+                        </Text>
                       </View>
                       <Text style={styles.feedbackDateText}>
-                        Submitted {ServiceRequestUtils.formatDate(existingFeedback.created_at)}
+                        Submitted {ServiceRequestUtils.formatDate(existingFeedback.created_at || existingFeedback.submitted_at)}
                       </Text>
                     </View>
                   </View>

@@ -117,7 +117,9 @@ export default function PerformanceTab() {
             <View style={styles.iconCircle}>
               <Ionicons name="star" size={24} color="#10b981" />
             </View>
-            <Text style={styles.overviewNumber}>{performanceData.averageRating.toFixed(1)}</Text>
+            <Text style={styles.overviewNumber}>
+              {performanceData.averageRating > 0 ? performanceData.averageRating.toFixed(1) : '—'}
+            </Text>
             <Text style={styles.overviewLabel}>Average Rating</Text>
           </View>
         </View>

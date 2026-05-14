@@ -165,15 +165,11 @@ export default function HomeScreen() {
           phone: driver.phone_number,
           profile_picture: driver.profile_picture,
           status: driver.status || 'active',
-          rating: 4.8,
-          totalCollections: 156,
-          todayCollections: 8,
-          workAreas: 2,
-          vehicle: {
-            plateNo: 'ISB-2024',
-            model: 'Toyota Hilux',
-            status: 'active'
-          }
+          rating: null,
+          ratingCount: 0,
+          totalCollections: 0,
+          todayCollections: 0,
+          vehicle: null,
         });
       }
 
@@ -187,10 +183,10 @@ export default function HomeScreen() {
         // Update driver data with dynamic stats
         setDriverData(prev => ({
           ...prev,
-          rating: stats.rating || 5.0,
+          rating: stats.rating != null ? parseFloat(stats.rating) : null,
+          ratingCount: stats.ratingCount || 0,
           totalCollections: stats.totalCollections || 0,
           todayCollections: stats.todayCollections || 0,
-          // workAreas removed
         }));
       } catch (statsErr) {
         console.error('Error loading dashboard stats:', statsErr);
@@ -285,7 +281,7 @@ export default function HomeScreen() {
     totalRequests: 0,
     activeRequests: 0,
     completedRequests: 0,
-    userRating: '4.9'
+    cancelledRequests: 0
   });
   const [nextCollection, setNextCollection] = useState(null);
   const [residentError, setResidentError] = useState(null);
@@ -315,7 +311,7 @@ export default function HomeScreen() {
         totalRequests: 0,
         activeRequests: 0,
         completedRequests: 0,
-        userRating: '4.9'
+        cancelledRequests: 0
       };
 
       setResidentProfile(normalizedProfile);
@@ -429,7 +425,9 @@ export default function HomeScreen() {
             <View style={styles.quickStatItem}>
               <Ionicons name="star" size={moderateScale(24)} color="white" />
               <View style={styles.quickStatText}>
-                <Text style={styles.quickStatNumber}>{driverData.rating}</Text>
+                <Text style={styles.quickStatNumber}>
+                  {driverData.rating != null ? driverData.rating : '—'}
+                </Text>
                 <Text style={styles.quickStatLabel}>Rating</Text>
               </View>
             </View>
@@ -691,10 +689,10 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.statCard}>
                   <View style={styles.statIconContainer}>
-                    <Ionicons name="chatbubble-ellipses" size={20} color="#10b981" />
+                    <Ionicons name="close-circle-outline" size={20} color="#10b981" />
                   </View>
-                  <Text style={styles.statNumber}>{residentStats.userRating}</Text>
-                  <Text style={styles.statLabel}>User Rating</Text>
+                  <Text style={styles.statNumber}>{residentStats.cancelledRequests ?? 0}</Text>
+                  <Text style={styles.statLabel}>Cancelled</Text>
                 </View>
               </View>
 
