@@ -14,6 +14,7 @@ export const SocketProvider = ({ children }) => {
     const router = useRouter();
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [newChatEvent, setNewChatEvent] = useState(null);
     const socketRef = useRef(null);
 
     useEffect(() => {
@@ -114,6 +115,12 @@ export const SocketProvider = ({ children }) => {
                 console.log('📍 Event Received: drivers:update', data);
             });
 
+            // New chat created (driver assigned to service request)
+            newSocket.on('chat:created', (data) => {
+                console.log('💬 New chat created:', data);
+                setNewChatEvent(data); // triggers re-render in any component that uses this
+            });
+
             // Force logout when society is blocked by super admin
             newSocket.on('force-logout', async (data) => {
                 console.warn('🚫 Force logout received:', data?.reason);
@@ -159,7 +166,7 @@ export const SocketProvider = ({ children }) => {
     }, [state.accessToken, state.user]);
 
     return (
-        <SocketContext.Provider value={{ socket, isConnected }}>
+        <SocketContext.Provider value={{ socket, isConnected, newChatEvent }}>
             {children}
         </SocketContext.Provider>
     );

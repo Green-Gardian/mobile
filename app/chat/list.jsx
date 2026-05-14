@@ -14,12 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { ChatAPI } from '../../services/chat';
 
 export default function ChatListScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { state } = useAuth();
+    const { newChatEvent } = useSocket();
     const isDriver = state.user?.role === 'driver';
     const headerColors = ['#047857', '#065f46'];
 
@@ -34,6 +36,11 @@ export default function ChatListScreen() {
     useEffect(() => {
         loadChats();
     }, []);
+
+    // Reload when a new chat is created (driver assigned to service request)
+    useEffect(() => {
+        if (newChatEvent) loadChats();
+    }, [newChatEvent]);
 
     useEffect(() => {
         // handle contact support specifically?
@@ -101,9 +108,9 @@ export default function ChatListScreen() {
     };
 
     const getChatTitle = (chat) => {
-        const title = chat.chatTitle || chat.title || chat.name || '';
+        const title = chat.chattitle || chat.chatTitle || chat.title || chat.name || '';
         if (!title || title === 'undefined' || title === 'null') {
-            return 'Customer Support';
+            return 'Support Chat';
         }
         return title;
     };
